@@ -1,50 +1,101 @@
-# Welcome to your Expo app 👋
+# Todos por Angola – Aplicativo Mapa Zzz
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo móvel desenvolvido com Expo e React Native que mapeia áreas de risco em Angola, permitindo que cidadãos registrem ocorrências, validem alertas e acessem conteúdos educativos. A solução integra funcionalidades de geolocalização, captura de imagens e autenticação para fomentar ações comunitárias orientadas por dados.
 
-## Get started
+## Funcionalidades principais
 
-1. Install dependencies
+- Mapa interativo que exibe áreas de risco com zonas destacadas por nível de confirmação comunitária.
+- Pesquisa de endereços e centralização automática na localização atual do utilizador.
+- Fluxo seguro de login, registo e confirmação via OTP antes de liberar ações sensíveis.
+- Captura de imagens e envio de questionário contextual para registar novas áreas de risco.
+- Painel modal com detalhes, imagens e botão de confirmação de cada ocorrência.
+- Área de aprendizagem com chatbot simples para orientar utilizadores sobre boas práticas.
 
-   ```bash
-   npm install
-   ```
+## Arquitetura tecnológica
 
-2. Start the app
+- **Framework:** Expo (React Native + Expo Router) com TypeScript.
+- **Gestão de estado local:** Hooks nativos (`useState`, `useEffect`) e `AsyncStorage` para persistir o token.
+- **Serviços nativos:** `expo-location`, `expo-camera`, `expo-file-system`, `expo-media-library`.
+- **UI:** `react-native-maps`, `lucide-react-native`, `@expo/vector-icons` e componentes próprios.
+- **Integração backend:** Endpoints REST hospedados com proxy Serveo para autenticação, upload de mídia e gestão de áreas de risco.
 
-   ```bash
-    npx expo start
-   ```
+## Requisitos
 
-In the output, you'll find options to open the app in a
+- Node.js 18 LTS (ou superior compatível com Expo SDK 52).
+- npm 8+ ou yarn 1.22+.
+- Expo CLI (opcional, recomendado) instalado globalmente: `npm install -g expo-cli`.
+- Android Studio, Xcode ou Expo Go para execução em dispositivos/emuladores.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Como executar
 
 ```bash
-npm run reset-project
+git clone https://github.com/tiagomatias930/todos-por-angola.git
+cd todos-por-angola/mapazzz
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use as teclas exibidas no terminal para abrir no Expo Go (`a` / `i`) ou emulador web (`w`).
 
-## Learn more
+### Scripts úteis
 
-To learn more about developing your project with Expo, look at the following resources:
+| Comando | Descrição |
+| --- | --- |
+| `npm run android` | Inicia o bundle no Expo e abre emulador Android configurado. |
+| `npm run ios` | Inicia o bundle e abre simulador iOS (apenas macOS). |
+| `npm run web` | Executa versão web experimental (React Native Web). |
+| `npm test` | Roda testes com Jest Expo. |
+| `npm run lint` | Executa validação estática com `expo lint`. |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Configuração de APIs e chaves
 
-## Join the community
+- Os endpoints principais estão definidos diretamente nos módulos de ecrã: veja `API_URL` e rotas em `fetch` em [mapazzz/src/app/camera/index.tsx](mapazzz/src/app/camera/index.tsx), [mapazzz/src/app/Mapa/index.tsx](mapazzz/src/app/Mapa/index.tsx), [mapazzz/src/app/Login/index.tsx](mapazzz/src/app/Login/index.tsx) e [mapazzz/src/app/registo/index.tsx](mapazzz/src/app/registo/index.tsx).
+- Para apontar para um backend próprio, substitua as URLs `https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/...` pelo domínio desejado ou extraia-as para variáveis de ambiente utilizando `expo-constants`.
+- O token JWT do utilizador é persistido com a chave `BearerToken` via `AsyncStorage` e removido no logout.
 
-Join our community of developers creating universal apps.
+## Fluxos de utilização
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. **Onboarding:** utilizador abre o app, visualiza tela inicial e acede ao mapa caso já possua sessão válida.
+2. **Autenticação:** sem token, o utilizador é direcionado para o fluxo de login e OTP antes de poder reportar áreas de risco.
+3. **Consulta de mapa:** mapa centraliza na localização atual, permite pesquisar bairros e visualizar detalhes em modal.
+4. **Registo de risco:** botão central abre a câmara, recolhe foto e questionário, envia imagem ao servidor e cria nova área.
+5. **Validação comunitária:** qualquer utilizador autenticado pode confirmar áreas existentes, incrementando o nível de risco exibido.
+6. **Aprendizagem:** secção Aprender disponibiliza chatbot informativo com respostas rápidas predefinidas.
+
+## Estrutura do projecto
+
+```
+mapazzz/
+├─ app.json
+├─ package.json
+├─ assets/
+│  └─ images/
+├─ src/
+│  ├─ app/
+│  │  ├─ index.tsx
+│  │  ├─ Mapa/
+│  │  ├─ camera/
+│  │  ├─ Login/
+│  │  ├─ Otp/
+│  │  ├─ registo/
+│  │  └─ Aprender/
+│  ├─ components/
+│  │  ├─ Button/
+│  │  ├─ Footer/
+│  │  ├─ ImageViewer.tsx
+│  │  └─ Questionario/
+│  └─ context/
+└─ tsconfig.json
+```
+
+## Testes e qualidade
+
+- Execute `npm test` para validar componentes e lógica com Jest Expo.
+- Utilize `npm run lint` antes de abrir PRs para garantir conformidade com regras do Expo.
+- Ao desenvolver funcionalidades que consomem localização, teste em dispositivos físicos sempre que possível (permissões e sensores têm diferenças relevantes em emuladores).
+
+## Próximos passos sugeridos
+
+- Externalizar as URLs de API para ficheiros de configuração por ambiente.
+- Implementar cache offline para exibição das áreas de risco sem conectividade.
+- Automatizar workflows com Expo EAS para gerar builds de distribuição.
