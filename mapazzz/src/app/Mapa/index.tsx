@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { View, SafeAreaView, StyleSheet, TouchableOpacity, Dimensions, Image, Text, ScrollView, Modal, Alert } from "react-native";
 import MapView, { MAP_TYPES, Circle } from "react-native-maps";
 import * as Location from "expo-location";
@@ -6,9 +6,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { TextInput } from "react-native";
 import { Search, MapPin, Layers } from "lucide-react-native";
-import { router, Link, usePathname } from "expo-router";
+import { router, usePathname } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
+import { reportCategories } from "@/src/constants/reportCategories";
 
 
 const screenWidth = Dimensions.get("window").width;
@@ -19,6 +20,46 @@ interface FooterItemProps {
   icon: React.ReactNode;
   isActive: boolean;
   onPress: () => void;
+}
+
+type ReportCategoryFilter = "todas" | "infraestrutura" | "seguranca" | "saude";
+
+interface MapLocation {
+  id: string;
+  latitude: string;
+  longitude: string;
+  chuva?: string;
+  temperatura?: string;
+  tempo?: string;
+  enderecoFormatado?: string;
+  imagem?: string;
+  confirmationCount?: number;
+  categoria?: "infraestrutura" | "seguranca" | "saude";
+}
+
+const circleFillColors: Record<Exclude<ReportCategoryFilter, "todas">, string> = {
+  infraestrutura: "rgba(22, 160, 133, 0.35)",
+  seguranca: "rgba(255, 107, 60, 0.35)",
+  saude: "rgba(27, 152, 245, 0.35)",
+  { id: "saude", label: "Saúde" },
+  }
+  if (location?.temperatura === "SIM" || endereco.includes("posto")) {
+    return "seguranca" as const;
+  }
+  return "infraestrutura" as const;
+}
+
+function getCategoryMetadata(categoryId?: string) {
+  const metadata = reportCategories.find(
+    (item) => item.id === categoryId,
+  return {
+    id: "infraestrutura",
+    title: "Ocorrência urbana",
+    description: "",
+    icon: "construct",
+    route: "/reportar/infraestrutura",
+    highlightColor: "#16A085",
+  };
 }
 
 const FooterItem: React.FC<FooterItemProps> = ({
@@ -47,22 +88,22 @@ const FooterItem: React.FC<FooterItemProps> = ({
     </TouchableOpacity>
   );
 };
-let logado = false;
 export default function TelaMapa() {
-  
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [isLogged, setIsLogged] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<
+    "todas" | "infraestrutura" | "seguranca" | "saude"
+  >("todas");
+
   const checkToken = async () => {
     try {
-      const tokenT = await AsyncStorage.getItem('BearerToken'); // Chave usada para salvar o token
+      const tokenT = await AsyncStorage.getItem('BearerToken');
       if (tokenT) {
-        console.log('Token encontrado:', tokenT);
-        setToken(tokenT)
-        logado = true;
-        // Adicione aqui qualquer lógica para quando o token existir
+        setToken(tokenT);
+        setIsLogged(true);
       } else {
-        console.log('Token não encontrado!');
-        logado = false;
-        // Redirecione o usuário para login ou exiba uma mensagem de erro
+        setToken(null);
+        setIsLogged(false);
       }
     } catch (error) {
       console.error('Erro ao verificar o token:', error);
@@ -75,21 +116,27 @@ export default function TelaMapa() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [longitude, setLongitude] = useState(0);
   const [lantitude, setLantitude] = useState(0);
-  const [locations, setLocations] = useState([]);
-  const [localImages, setLocalImages] = useState({});
+  const [locations, setLocations] = useState<MapLocation[]>([]);
+  const [localImages, setLocalImages] = useState<Record<string, string>>({});
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const displayedLocations = useMemo(() => {
+    if (categoryFilter === "todas") {
+      return locations;
+    }
+    return locations.filter((location) => location.categoria === categoryFilter);
+  }, [locations, categoryFilter]);
 
   
   const toggleModal = () => {
     setIsModalVisible(!isModalVisible);
   };
 
-  const getDownloadableLink = (googleDriveLink) => {
+  const getDownloadableLink = (googleDriveLink: string) => {
     const fileId = googleDriveLink.split("/d/")[1]?.split("/")[0];
     return `https://drive.google.com/uc?export=download&id=${fileId}`;
   };
 
-  const downloadImage = async (imageUrl, id) => {
+  const downloadImage = async (imageUrl: string, id: string) => {
     try {
       const downloadableLink = getDownloadableLink(imageUrl);
       const fileUri = `${FileSystem.documentDirectory}${id}.jpg`;
@@ -103,7 +150,7 @@ export default function TelaMapa() {
   };
 
   const downloadAllImages = async () => {
-    const updatedImages = {};
+    const updatedImages: Record<string, string> = {};
     for (const location of locations) {
       if (location.imagem) {
         const localUri = await downloadImage(location.imagem, location.id);
@@ -114,7 +161,7 @@ export default function TelaMapa() {
     }
     setLocalImages(updatedImages);
   };
-  const getDirectImageLink = (googleDriveLink) => {
+  const getDirectImageLink = (googleDriveLink: string) => {
     try {
       const fileId = googleDriveLink.split("/d/")[1]?.split("/")[0];
       if (!fileId) {
@@ -204,23 +251,44 @@ export default function TelaMapa() {
     }
   };
   async function handleConfirmarRisco(ariaDeRisco: string) {
+    if (!isLogged) {
+      router.push("/Login");
+      return;
+    }
+
     try {
-      const res = await fetch("https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/analisar_aria", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/analisar_aria",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ariaDeRisco }),
         },
-        body: JSON.stringify({ ariaDeRisco }),
-      });
-  
-      // Aguarda a resolução da Promise e obtém os dados da resposta
+      );
+
       const data = await res.json();
-      if(!res.ok)
-        Alert.alert("ja interagiu com essa aria de Risco");
+      if (!res.ok) {
+        Alert.alert(
+          "Aviso",
+          data?.message ?? "Você já confirmou esta ocorrência recentemente.",
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Obrigado",
+        "A sua confirmação ajuda-nos a priorizar as equipas responsáveis.",
+      );
       console.log(data);
     } catch (error) {
       console.log(error);
+      Alert.alert(
+        "Erro",
+        "Não foi possível registar a confirmação. Tente novamente mais tarde.",
+      );
     }
   }
   const fetchConfirmationCount = async (ariaDeRiscoId: string) => {
@@ -259,15 +327,15 @@ export default function TelaMapa() {
       if (!response.ok) throw new Error("Erro ao acessar a API.");
   
       const data = await response.json();
-      // Para cada área de risco, buscamos o número de confirmações
-      const updatedLocations = await Promise.all(
-        data.map(async (location) => {
+      const updatedLocations: MapLocation[] = await Promise.all(
+        data.map(async (location: MapLocation) => {
           const confirmationCount = await fetchConfirmationCount(location.id);
-          return { ...location, confirmationCount };
+          const categoria = location.categoria ?? inferCategoryFromLocation(location);
+          return { ...location, confirmationCount, categoria };
         })
       );
-  
-      setLocations(updatedLocations); // Atualiza o estado com os resultados
+
+      setLocations(updatedLocations);
     } catch (error) {
       console.error("Erro na requisição:", error);
     }
@@ -282,19 +350,18 @@ export default function TelaMapa() {
     run();
   }, []);
 
-  async function  logout()
-  {
-   try {
-     await AsyncStorage.removeItem("BearerToken");
-     console.log("Token removido com sucesso!");
-     router.push("/Login"); // ou qualquer rota que deseje redirecionar
-   } catch (error) {
-     console.error("Erro ao remover o token:", error);
-   }
+  async function logout() {
+    try {
+      await AsyncStorage.removeItem("BearerToken");
+      setToken(null);
+      setIsLogged(false);
+      router.push("/Login");
+    } catch (error) {
+      console.error("Erro ao remover o token:", error);
+    }
   }
   
  
-  checkToken();
   return (
     <>
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -316,6 +383,35 @@ export default function TelaMapa() {
                 <Search size={18} color={"#158ADD"} />
               </TouchableOpacity>
             </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterScroll}
+              contentContainerStyle={styles.filterScrollContent}
+            >
+              {filterChips.map((chip) => {
+                const active = categoryFilter === chip.id;
+                return (
+                  <TouchableOpacity
+                    key={chip.id}
+                    style={[
+                      styles.filterChip,
+                      active && styles.filterChipActive,
+                    ]}
+                    onPress={() => setCategoryFilter(chip.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        active && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           <MapView
@@ -332,35 +428,31 @@ export default function TelaMapa() {
             }}
           >
             
-            {Array.isArray(locations) && locations.length > 0 ? (
-    locations.map((location, index) => {
-      // Definir a cor com base no número de confirmações
-      let circleColor = "rgba(255, 0, 0, 0.1)"; // Cor padrão (vermelha clara)
-      if (location.confirmationCount > 10) {
-        circleColor = "rgba(255, 0, 0, 0.7)"; // Alta confirmação (vermelho forte)
-      } else if (location.confirmationCount > 5) {
-        circleColor = "rgba(255, 165, 0, 0.5)"; // Média confirmação (laranja)
-      } else if (location.confirmationCount > 0) {
-        circleColor = "rgba(0, 255, 0, 0.3)"; // Baixa confirmação (verde claro)
-      }
+            {displayedLocations.length > 0
+              ? displayedLocations.map((location, index) => {
+                  const category = location.categoria ?? "infraestrutura";
+                  const fillColor =
+                    circleFillColors[category] || circleFillColors.infraestrutura;
+                  const strokeColor =
+                    circleStrokeColors[category] || circleStrokeColors.infraestrutura;
+                  const baseRadius = 120;
+                  const radius = baseRadius + (location.confirmationCount ?? 0) * 6;
 
-      return (
-        <Circle
-          key={index}
-          center={{
-            latitude: parseFloat(location.latitude),
-            longitude: parseFloat(location.longitude),
-          }}
-          radius={100}
-          strokeWidth={2}
-          strokeColor="rgb(240, 6, 6)"
-          fillColor={circleColor}
-        />
-      );
-    })
-  ) : (
-  <></> // ou algum tipo de feedback para o usuário
-)}
+                  return (
+                    <Circle
+                      key={`${location.id}-${index}`}
+                      center={{
+                        latitude: parseFloat(location.latitude),
+                        longitude: parseFloat(location.longitude),
+                      }}
+                      radius={radius}
+                      strokeWidth={2}
+                      strokeColor={strokeColor}
+                      fillColor={fillColor}
+                    />
+                  );
+                })
+              : null}
             </MapView>
             <TouchableOpacity
               style={styles.openPanelButton}
@@ -369,12 +461,11 @@ export default function TelaMapa() {
               <Text style={styles.openPanelButtonText}>Areas de Risco Recentes</Text>
             </TouchableOpacity>
 
-            {logado ? (<><TouchableOpacity
-              style={styles.openPanelButton1}
-              onPress={logout}
-            >
-              <Text style={styles.openPanelButtonText}>Logout</Text>
-            </TouchableOpacity></>):(<></>)}
+            {isLogged ? (
+              <TouchableOpacity style={styles.openPanelButton1} onPress={logout}>
+                <Text style={styles.openPanelButtonText}>Terminar sessão</Text>
+              </TouchableOpacity>
+            ) : null}
             
 
           
@@ -397,10 +488,10 @@ export default function TelaMapa() {
     <View style={styles.footer}>
       <View style={styles.buttonWrapper}>
         <FooterItem
-          title="MAPA"
+          title="INÍCIO"
           icon={
             <Ionicons
-              name={pathname === "/" ? "map" : "map-outline"}
+              name={pathname === "/" ? "home" : "home-outline"}
               size={24}
               color="black"
             />
@@ -410,7 +501,23 @@ export default function TelaMapa() {
         />
       </View>
 
-      <TouchableOpacity  onPress={token ? (() => {router.push(`/camera?latitude=${lantitude}&longitude=${longitude}`)}) : () => {router.push("/Login")}}>
+      <TouchableOpacity
+        onPress={() => {
+          if (!isLogged) {
+            router.push("/Login");
+            return;
+          }
+
+          router.push({
+            pathname: "/reportar/camera",
+            params: {
+              category: "infraestrutura",
+              latitude: String(lantitude ?? 0),
+              longitude: String(longitude ?? 0),
+            },
+          });
+        }}
+      >
           <Image
             source={require("../../../assets/images/button_alert.png")}
             style={{
@@ -428,16 +535,12 @@ export default function TelaMapa() {
           title="APRENDER"
           icon={
             <Ionicons
-              name={
-                pathname === "/aprender"
-                  ? "game-controller"
-                  : "game-controller-outline"
-              }
+              name={pathname.includes("Aprender") ? "game-controller" : "game-controller-outline"}
               size={24}
               color="black"
             />
           }
-          isActive={pathname === "/aprender"}
+          isActive={pathname.includes("Aprender")}
           onPress={() => router.push("/Aprender/aprender")}
         />
       </View>
@@ -452,46 +555,80 @@ export default function TelaMapa() {
     <View style={styles.modalContent}>
       <Text style={styles.modalTitle}>Painel de Informações</Text>
       <ScrollView>
-  {Array.isArray(locations) && locations.length > 0 ? (
-    locations.map((location) => (
-      <View key={location.id} style={styles.panelItem}>
-        <Image
-          source={{
-            uri: getDirectImageLink(location.imagem),
-          }}
-          style={styles.panelImage}
-          onError={(error) =>
-            console.error("Erro ao carregar imagem:", error.nativeEvent.error)
-          }
-        />
-        <View style={styles.panelTextContainer}>
-          <Text style={styles.panelDescription}>
-            Chuvas frequentes: {location.chuva}
-          </Text>
-          <Text style={styles.panelDescription}>
-            Temperatura muito Alta: {location.temperatura}
-          </Text>
-          <Text style={styles.panelDescription}>
-            Tempo que a área está em risco: {location.tempo}
-          </Text>
-          <Text style={styles.panelDescription}>
-            Local: {location.enderecoFormatado}
-          </Text>
+        {displayedLocations.length > 0 ? (
+          displayedLocations.map((location) => {
+            const metadata = getCategoryMetadata(location.categoria);
+            const imageUri = location.imagem
+              ? getDirectImageLink(location.imagem)
+              : null;
+            return (
+              <View key={location.id} style={styles.panelItem}>
+                {imageUri ? (
+                  <Image
+                    source={{ uri: imageUri }}
+                    style={styles.panelImage}
+                  />
+                ) : (
+                  <View style={styles.panelImagePlaceholder}>
+                    <Ionicons name="image" size={24} color="#0A3D62" />
+                    <Text style={styles.panelPlaceholderText}>Sem imagem</Text>
+                  </View>
+                )}
+                <View style={styles.panelTextContainer}>
+                  <View style={styles.panelHeaderRow}>
+                    <View
+                      style={[
+                        styles.categoryPill,
+                        { backgroundColor: metadata.highlightColor },
+                      ]}
+                    >
+                      <Ionicons
+                        name={metadata.icon as any}
+                        size={14}
+                        color="white"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.categoryPillText}>{metadata.title}</Text>
+                    </View>
+                    <Text style={styles.panelConfirmation}>
+                      {(location.confirmationCount ?? 0)} validações
+                    </Text>
+                  </View>
+                  <Text style={styles.panelAddress}>
+                    {location.enderecoFormatado || "Endereço não informado"}
+                  </Text>
+                  {location.tempo ? (
+                    <Text style={styles.panelDescription}>
+                      Última atualização: {location.tempo}
+                    </Text>
+                  ) : null}
+                  {location.chuva ? (
+                    <Text style={styles.panelDescription}>
+                      Impacto relatado: {location.chuva}
+                    </Text>
+                  ) : null}
+                  {location.temperatura ? (
+                    <Text style={styles.panelDescription}>
+                      Observação adicional: {location.temperatura}
+                    </Text>
+                  ) : null}
 
-          {/* Botão de confirmação */}
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={() => handleConfirmarRisco(location.id)}
-          >
-            <Text style={styles.confirmButtonText}>Confirmar que é uma área de risco</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    ))
-  ) : (
-    <Text>Nenhuma informação disponível.</Text>
-  )}
-</ScrollView>
+                  <TouchableOpacity
+                    style={styles.confirmButton}
+                    onPress={() => handleConfirmarRisco(location.id)}
+                  >
+                    <Text style={styles.confirmButtonText}>
+                      Confirmar ocorrência
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        ) : (
+          <Text style={styles.emptyText}>Nenhuma ocorrência disponível.</Text>
+        )}
+      </ScrollView>
       <TouchableOpacity style={styles.closeButton} onPress={toggleModal}>
         <Text style={styles.closeButtonText}>Fechar</Text>
       </TouchableOpacity>
@@ -506,11 +643,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  confirmButton:
-  {
-    backgroundColor:"green",
-    padding:5,
-    borderRadius:5
+  confirmButton: {
+    marginTop: 14,
+    backgroundColor: "#0A3D62",
+    paddingVertical: 12,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontWeight: "600",
   },
   mapContainer: {
     flex: 1,
@@ -542,6 +685,34 @@ const styles = StyleSheet.create({
   searchIcon: {
     position: "absolute",
     right: 16,
+  },
+  filterScroll: {
+    marginTop: 12,
+  },
+  filterScrollContent: {
+    paddingRight: 16,
+    alignItems: "center",
+  },
+  filterChip: {
+    marginRight: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#D0D8E2",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: "white",
+  },
+  filterChipActive: {
+    backgroundColor: "#0A3D62",
+    borderColor: "#0A3D62",
+  },
+  filterChipText: {
+    color: "#0A3D62",
+    fontWeight: "500",
+    fontSize: 12,
+  },
+  filterChipTextActive: {
+    color: "white",
   },
   bottomButtonsContainer: {
     position: "absolute",
@@ -678,7 +849,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 10,
     padding: 20,
-    alignItems: "center",
+    alignItems: "stretch",
     elevation: 10,
   },
   modalTitle: {
@@ -687,38 +858,66 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   panelItem: {
-    flexDirection: "column", // Alinha os itens verticalmente
-    alignItems: "center",
     marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    paddingBottom: 8,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#F4F7FB",
   },
   panelImage: {
-    width: screenWidth * 0.9,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 10, // Espaço entre a imagem e o texto
+    width: "100%",
+    height: 180,
   },
   panelTextContainer: {
-    alignItems: "flex-start", // Alinha o texto à esquerda
     width: "100%",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#fff",
+  },
+  panelHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
     paddingHorizontal: 10,
-    backgroundColor:"rgba(0, 0, 0, 0.3)",
-    borderRadius: 10,
+    paddingVertical: 6,
+  },
+  categoryPillText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  panelConfirmation: {
+    fontSize: 12,
+    color: "#3F536C",
+    fontWeight: "600",
+  },
+  panelAddress: {
+    fontSize: 14,
+    color: "#0A3D62",
+    fontWeight: "600",
+    marginBottom: 6,
   },
   panelDescription: {
-    fontSize: 14,
-    color: "black",
-    marginBottom: 5, // Espaço entre as linhas de texto
+    fontSize: 13,
+    color: "#3F536C",
+    marginBottom: 4,
   },
-  panelTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
+  panelImagePlaceholder: {
+    width: "100%",
+    height: 180,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E3F5FF",
   },
-  panelDescription: {
-    fontSize: 14,
-    color: "white",
+  panelPlaceholderText: {
+    marginTop: 6,
+    color: "#3F536C",
+    fontSize: 12,
   },
   closeButton: {
     backgroundColor: "#158ADD",
@@ -731,5 +930,10 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  emptyText: {
+    marginTop: 20,
+    textAlign: "center",
+    color: "#3F536C",
   },
 });

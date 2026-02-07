@@ -1,6 +1,6 @@
-# Todos por Angola – Aplicativo Mapa Zzz
+# Nova Angola – GovTech Platform
 
-Aplicativo móvel desenvolvido com Expo e React Native que mapeia áreas de risco em Angola, permitindo que cidadãos registrem ocorrências, validem alertas e acessem conteúdos educativos. A solução integra funcionalidades de geolocalização, captura de imagens e autenticação para fomentar ações comunitárias orientadas por dados.
+Plataforma móvel desenvolvida com Expo e React Native que empodera cidadãos angolanos a reportar, validar e resolver desafios urbanos com apoio de inteligência artificial (Gemini). A solução integra funcionalidades de geolocalização, análise de imagens por IA, triagem de saúde e autenticação segura para fomentar ações comunitárias orientadas por dados em tempo real.
 
 ## Funcionalidades principais
 
@@ -17,7 +17,8 @@ Aplicativo móvel desenvolvido com Expo e React Native que mapeia áreas de risc
 - **Gestão de estado local:** Hooks nativos (`useState`, `useEffect`) e `AsyncStorage` para persistir o token.
 - **Serviços nativos:** `expo-location`, `expo-camera`, `expo-file-system`, `expo-media-library`.
 - **UI:** `react-native-maps`, `lucide-react-native`, `@expo/vector-icons` e componentes próprios.
-- **Integração backend:** Endpoints REST hospedados com proxy Serveo para autenticação, upload de mídia e gestão de áreas de risco.
+- **IA:** Google Gemini API para classificação de imagens e análise de sintomas de saúde.
+- **Backend:** Supabase (PostgreSQL + Auth + Storage) para autenticação, upload de mídia, gestão de áreas de risco e perfis de utilizadores.
 
 ## Requisitos
 
