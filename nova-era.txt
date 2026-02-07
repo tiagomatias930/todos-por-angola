@@ -1,0 +1,69 @@
+Esta é uma evolução fantástica e muito necessária. Você está a mover a aplicação de um "mapa de rastreio de nicho" (malária) para uma Plataforma de Governação Digital e Cidadania Ativa (GovTech). Isso transforma o projeto em uma ferramenta de "Cidades Inteligentes" (Smart Cities).
+Com base no código atual (Expo/React Native) e na sua nova visão, aqui está uma proposta estruturada para transformar o Todos por Angola na nova plataforma.
+1. Nova Identidade e Visão
+O nome "Mapa Zzz" focava no sono/mosquito. O novo nome deve refletir ação, conexão e cidadania.
+ * Sugestões de Nome: Angola Conectada, Voz do Cidadão, Fala Angola, Elo Cidadão.
+  * Nova Missão: "Empoderar o cidadão angolano para ser um agente ativo na melhoria da sua comunidade, conectando problemas reais a soluções governamentais através de inteligência artificial."
+  2. Arquitetura da Nova Solução
+  A estrutura atual (mostrada no README.md) é um bom ponto de partida, mas precisa de crescer.
+  A. O "Cérebro" (Inteligência Artificial)
+  Você mencionou que a IA vai analisar fotos e sintomas.
+   * Triagem Visual (Computer Vision): Quando o utilizador envia uma foto de um buraco, a IA deve identificar: "Isto é 90% provável ser um buraco na via pública" vs "Isto é uma foto aleatória".
+    * Triagem de Saúde (NLP/LLM): O utilizador digita "febre alta e dores no corpo". A IA (baseada em modelos médicos supervisionados) sugere: "Dirija-se à unidade sanitária. Enquanto isso, mantenha-se hidratado." Nota: É crucial incluir avisos legais de que a IA não substitui um médico.
+    B. O "Despachante" (Backend)
+    Atualmente, você usa serveo.net (que é temporário). Para esta escala, precisará de um backend robusto (Node.js, Python ou Supabase) que atue como um "Router":
+     * Recebe o Reporte.
+      * IA valida e classifica (ex: Categoria "Infraestrutura").
+       * Backend encaminha para a "Entidade Infraestruturas".
+       3. Novas Funcionalidades (UX/UI)
+       Vamos reestruturar as pastas do src/app para refletir os novos fluxos.
+       Ecrã Inicial (Dashboard)
+       Em vez de cair direto no mapa, o utilizador vê um menu de ações rápidas:
+        * 🚑 Saúde & Primeiros Socorros
+         * 🚔 Segurança & Acidentes
+          * 🚧 Infraestrutura (Buracos, Luz, Água)
+           * 🗺️ Mapa de Ocorrências (O antigo Mapa Zzz)
+           Fluxo 1: Reporte Inteligente (Acidentes/Buracos)
+            * Ação: O utilizador clica em "Reportar".
+             * Câmara (src/app/camera): Tira a foto.
+              * Análise IA (Novo): Antes de enviar, o app mostra um loading "Analisando imagem...".
+               * Formulário Dinâmico: Se a IA detecta um acidente, pede: "Há feridos?". Se detecta um buraco, pede: "Impede a passagem?".
+                * Geolocalização: Já existente no seu código (expo-location), fixa o ponto exato.
+                Fluxo 2: Assistente de Saúde
+                 * Input: Texto ou Áudio (Speech-to-Text) descrevendo sintomas + Foto da receita/ferida.
+                  * Resposta Imediata: Instruções de primeiros socorros geradas pela IA.
+                   * Routing: O mapa (src/app/Mapa) filtra para mostrar apenas hospitais/farmácias num raio de 5km e traça a rota.
+                   4. Plano de Alteração do Código (Roadmap Técnico)
+                   Considerando o seu README.md, aqui estão os passos práticos para a migração:
+                   Passo 1: Reestruturação de Pastas
+                   Mova a lógica atual de "risco de malária" para ser apenas um dos módulos.
+                   src/
+                    ├─ app/
+                     │  ├─ (home)/index.tsx  <-- Novo Dashboard com categorias
+                      │  ├─ reportar/         <-- Fluxo genérico de reporte
+                       │  │  ├─ [categoria].tsx
+                        │  │  └─ camera.tsx     <-- Reutilizar sua câmera atual
+                         │  ├─ saude/            <-- Novo módulo de sintomas
+                          │  ├─ mapa/             <-- O seu mapa atual, mas com filtros
+
+                          Passo 2: Integração da IA (API)
+                          No arquivo onde você faz o upload da imagem (atualmente no Questionario ou camera), você deve alterar o endpoint.
+                           * Atual: Envia para salvar e marcar no mapa.
+                            * Novo: Envia para um endpoint /api/analyze.
+                               * Este endpoint conecta-se à OpenAI (GPT-4 Vision) ou Google Gemini API para retornar a classificação da imagem JSON.
+                               Passo 3: Atualização do Mapa
+                               No src/app/Mapa/index.tsx, os "marcadores" (pins) precisam de cores diferentes:
+                                * 🔴 Vermelho: Acidentes/Emergência
+                                 * 🟡 Amarelo: Infraestrutura/Buracos
+                                  * 🔵 Azul: Saúde/Hospitais
+                                   * 🦟 Verde: Focos de doença (legado Mapa Zzz)
+                                   Passo 4: Autenticação Robusta
+                                   O seu fluxo de Login/OTP está bom, mas para conectar com o governo, talvez seja necessário adicionar campos no perfil do utilizador (NIF ou BI) para dar credibilidade à denúncia.
+                                   5. Sugestão de Tecnologias Adicionais
+                                   Para atingir este nível de sofisticação com Expo:
+                                    * AI no Backend: Utilize Firebase Functions ou Supabase Edge Functions para chamar a API da IA (Gemini/OpenAI) de forma segura, sem expor as chaves no app.
+                                     * Notificações Push: Utilize Expo Notifications. Quando a entidade "Governo" resolver o buraco, o utilizador recebe um push: "A sua denúncia foi resolvida!".
+                                      * Mapas: Continue com react-native-maps, mas considere usar o Google Maps API para obter dados de trânsito e rotas para hospitais com maior precisão.
+                                      Próximo Passo Imediato
+                                      Deseja que eu escreva um exemplo de código de como seria a função (Service) que recebe a imagem da câmara, envia para uma IA (simulada ou real) e devolve a classificação (ex: "Acidente detetado") para o utilizador validar?
+                                      
