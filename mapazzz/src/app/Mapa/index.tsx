@@ -41,25 +41,70 @@ const circleFillColors: Record<Exclude<ReportCategoryFilter, "todas">, string> =
   infraestrutura: "rgba(22, 160, 133, 0.35)",
   seguranca: "rgba(255, 107, 60, 0.35)",
   saude: "rgba(27, 152, 245, 0.35)",
+};
+
+const circleStrokeColors: Record<Exclude<ReportCategoryFilter, "todas">, string> = {
+  infraestrutura: "rgba(22, 160, 133, 0.7)",
+  seguranca: "rgba(255, 107, 60, 0.7)",
+  saude: "rgba(27, 152, 245, 0.7)",
+};
+
+const filterChips: Array<{ id: ReportCategoryFilter; label: string }> = [
+  { id: "todas", label: "Todas" },
+  { id: "infraestrutura", label: "Infraestrutura" },
+  { id: "seguranca", label: "Segurança" },
   { id: "saude", label: "Saúde" },
+];
+
+function inferCategoryFromLocation(
+  location: MapLocation,
+): Exclude<ReportCategoryFilter, "todas"> {
+  if (location.categoria) {
+    return location.categoria;
   }
-  if (location?.temperatura === "SIM" || endereco.includes("posto")) {
-    return "seguranca" as const;
+
+  const searchable = (
+    `${location.enderecoFormatado ?? ""} ${location.chuva ?? ""} ${location.temperatura ?? ""} ${location.tempo ?? ""}`
+  ).toLowerCase();
+
+  if (
+    searchable.includes("hospital") ||
+    searchable.includes("saude") ||
+    searchable.includes("saúde") ||
+    searchable.includes("clinica") ||
+    searchable.includes("clínica") ||
+    searchable.includes("posto medico") ||
+    searchable.includes("posto de saude")
+  ) {
+    return "saude";
   }
-  return "infraestrutura" as const;
+
+  if (
+    searchable.includes("assalto") ||
+    searchable.includes("crime") ||
+    searchable.includes("perigo") ||
+    searchable.includes("roubo") ||
+    searchable.includes("seguranca") ||
+    searchable.includes("segurança") ||
+    searchable.includes("violencia") ||
+    searchable.includes("violência")
+  ) {
+    return "seguranca";
+  }
+
+  return "infraestrutura";
 }
 
 function getCategoryMetadata(categoryId?: string) {
-  const metadata = reportCategories.find(
-    (item) => item.id === categoryId,
-  return {
-    id: "infraestrutura",
-    title: "Ocorrência urbana",
-    description: "",
-    icon: "construct",
-    route: "/reportar/infraestrutura",
-    highlightColor: "#16A085",
-  };
+  const fallback =
+    reportCategories.find((item) => item.id === "infraestrutura") ??
+    reportCategories[0];
+
+  if (!categoryId) {
+    return fallback;
+  }
+
+  return reportCategories.find((item) => item.id === categoryId) ?? fallback;
 }
 
 const FooterItem: React.FC<FooterItemProps> = ({
