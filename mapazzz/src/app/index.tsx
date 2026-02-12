@@ -51,17 +51,18 @@ export default function HomeDashboard() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <View>
+            {/* Logo imagem<Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />*/}
             <Text style={styles.overline}>Plataforma GovTech</Text>
             <Text style={styles.title}>Nova Angola</Text>
             <Text style={styles.subtitle}>
-              Empoderamos cada cidadão a reportar, validar e resolver desafios urbanos com apoio de inteligência artificial (Gemini).
+              Empoderamos cada cidadão a reportar, validar e resolver desafios urbanos com apoio de inteligência artificial.
             </Text>
           </View>
-          <Image
-            source={require("@/assets/images/background-image.png")}
-            style={styles.heroImage}
-            resizeMode="contain"
-          />
+
         </View>
 
         <View style={styles.heroCard}>
@@ -121,7 +122,7 @@ export default function HomeDashboard() {
             <TouchableOpacity
               key={action.id}
               style={styles.card}
-              onPress={() => router.push(action.route)}
+              onPress={() => router.push(action.route as any)}
             >
               <View style={styles.cardIconWrapper}>
                 <Ionicons name={action.icon as any} size={24} color="#0A3D62" />

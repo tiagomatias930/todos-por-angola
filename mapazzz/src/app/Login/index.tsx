@@ -42,7 +42,7 @@ export default function LoginScreen() {
       {
         storeToken(result.token);
         Alert.alert('Sucesso', "Login realizado com sucesso! vai receber o OTP no seu dispositivo");
-        router.push("/Otp");
+        router.push({ pathname: '/Otp' });
       }
       // if(!response.ok)
       //   throw new Error("Falha ao conectar com a api");
@@ -72,11 +72,11 @@ export default function LoginScreen() {
 
       <View style={styles.bottomHalf}>
         <View style={styles.contentContainer}>
-          <Text style={styles.title}>Entrar na minha conta</Text>
+          <Text style={styles.title}>Acessar a minha conta</Text>
 
           <View style={styles.inputContainer}>
             <Ionicons name="person" size={20} color="#666" style={styles.icon} />
-            <TextInput placeholder="Email ou número de telefone" style={styles.input} value={telefone} onChangeText={setTelefone}/>
+            <TextInput placeholder="Número de Telefone ou NIF" style={styles.input} value={telefone} onChangeText={setTelefone}/>
           </View>
 
           <View style={styles.inputContainer}>
@@ -84,7 +84,7 @@ export default function LoginScreen() {
             <TextInput placeholder="Senha" secureTextEntry style={styles.input} value={password} onChangeText={setPassword}/>
           </View>
 
-          <TouchableOpacity onPress={() => router.replace('/recuperar')}>
+          <TouchableOpacity onPress={() => router.replace({ pathname: '/registo' })}>
             <Text style={styles.forgotPassword}>Esqueci minha senha</Text>
           </TouchableOpacity>
 
@@ -92,7 +92,7 @@ export default function LoginScreen() {
             <Text style={styles.loginText}>Entrar</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push("/registo")}>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/registo' })}>
             <Text style={styles.signupText}>
               Não tenho uma conta? <Text style={styles.signupLink}>Criar conta</Text>
             </Text>
@@ -110,20 +110,22 @@ const styles = StyleSheet.create({
 
     topHalf: {
         flex: 0.5,
-        backgroundColor: '#238b45',
+        backgroundColor: '#000',
         position: 'relative',
     },
 
     bottomHalf: {
         flex: 0.5, 
-        backgroundColor: '#fff',
+        backgroundColor: '#f63700',
     },
 
     imageBackground: {
+        padding: 50,
         width: '100%',
         height: '100%',
         position: 'absolute',
-        top: 0,
+        top: 60,
+        left: 50,
     },
 
     contentContainer: {
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#238b45',
+        color: '#fff',
         marginBottom: 25,
         marginTop: 5,
     },
@@ -168,7 +170,7 @@ forgotPassword: {
 },
 
 loginButton: {
-    backgroundColor: '#238b45',
+    backgroundColor: '#fdca49',
     borderRadius: 10,
     width: '100%',
     height: 50,
@@ -178,16 +180,16 @@ loginButton: {
 
 loginText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: 'bold',
 },
 
 signupText: {
     marginTop: 20,
-    color: '#666',
+    color: '#fff',
 },
 signupLink: {
-    color: '#239b25',
+    color: '#9dd3df',
     fontWeight: 'bold',
 },
 });
