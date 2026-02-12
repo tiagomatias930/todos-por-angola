@@ -14,7 +14,7 @@ export interface SymptomAnalysisResult {
   suggestedAction?: string;
 }
 
-const GEMINI_MODEL = "gemini-2.0-flash"; // Using latest model
+const GEMINI_MODEL = "gemini-2.5-flash"; // Using latest model
 
 /**
  * Call Gemini API for image classification

@@ -2,16 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 import { ENV } from "@/src/config/env";
 
 // Initialize Supabase client
-const supabaseUrl = ENV.SUPABASE_URL;
-const supabaseAnonKey = ENV.SUPABASE_ANON_KEY;
+// Use ENV values with hardcoded fallbacks to prevent "Invalid supabaseUrl" crashes
+const supabaseUrl =
+  ENV.SUPABASE_URL && ENV.SUPABASE_URL.startsWith("http")
+    ? ENV.SUPABASE_URL
+    : "https://tsvshwlgkmbiugxyjzzy.supabase.co";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "Supabase URL and anon key are required. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY environment variables."
-  );
-}
+const supabaseAnonKey =
+  ENV.SUPABASE_ANON_KEY && ENV.SUPABASE_ANON_KEY.length > 0
+    ? ENV.SUPABASE_ANON_KEY
+    : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzdnNod2xna21iaXVneHlqenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NjE1NDQsImV4cCI6MjA4NjQzNzU0NH0.PReWpXGmJgEP8plHs8zgSCJtosLz7GmLPIWNUuynckM";
 
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper types for database queries
 export interface RiskArea {

@@ -4,4 +4,7 @@
  node_modules
 expo-env.d.ts
 .expo
+.ENV
+.env
+env.ts
 # @end expo-cli

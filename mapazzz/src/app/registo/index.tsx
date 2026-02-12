@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { cadastrarUsuario } from '@/src/services/userService';
-import { validarNIF, validarTelefone } from '@/src/services/angolaApi';
+import { validarNIF, validarTelefone, nomeCorrespondeAoNIF } from '@/src/services/angolaApi';
 
 type ValidationStatus = 'idle' | 'loading' | 'valid' | 'invalid';
 
@@ -32,6 +32,7 @@ export default function RegisterScreen() {
   // Validation states
   const [nifStatus, setNifStatus] = useState<ValidationStatus>('idle');
   const [nifMessage, setNifMessage] = useState('');
+  const [nifNome, setNifNome] = useState('');  // nome retornado pela API do NIF
   const [phoneStatus, setPhoneStatus] = useState<ValidationStatus>('idle');
   const [phoneMessage, setPhoneMessage] = useState('');
 
@@ -44,6 +45,7 @@ export default function RegisterScreen() {
     setEmail(value);
     setNifStatus('idle');
     setNifMessage('');
+    setNifNome('');
 
     if (nifTimerRef.current) clearTimeout(nifTimerRef.current);
 
@@ -54,6 +56,9 @@ export default function RegisterScreen() {
         const result = await validarNIF(value);
         setNifStatus(result.success ? 'valid' : 'invalid');
         setNifMessage(result.message);
+        if (result.success && result.nome) {
+          setNifNome(result.nome);
+        }
       }, 800);
     }
   }, []);
@@ -114,6 +119,26 @@ export default function RegisterScreen() {
       setNifMessage(nifResult.message);
       if (!nifResult.success) {
         Alert.alert('NIF Inválido', nifResult.message);
+        return;
+      }
+      if (nifResult.nome) {
+        setNifNome(nifResult.nome);
+        // Verificar se o nome digitado corresponde ao nome do NIF
+        if (!nomeCorrespondeAoNIF(nome, nifResult.nome)) {
+          Alert.alert(
+            'Nome não corresponde',
+            `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifResult.nome}`,
+          );
+          return;
+        }
+      }
+    } else if (nifNome) {
+      // NIF já foi validado, mas verifica se o nome ainda corresponde
+      if (!nomeCorrespondeAoNIF(nome, nifNome)) {
+        Alert.alert(
+          'Nome não corresponde',
+          `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifNome}`,
+        );
         return;
       }
     }
