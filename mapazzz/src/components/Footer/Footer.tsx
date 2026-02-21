@@ -1,17 +1,10 @@
+import React from "react";
+import { View, StyleSheet, Dimensions } from "react-native";
+import { Text, TouchableRipple, Surface, useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, usePathname, router } from "expo-router";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  Pressable,
-  Image,
-  TouchableOpacity,
-} from "react-native";
+import { usePathname, router } from "expo-router";
 
 const screenWidth = Dimensions.get("window").width;
-const screenHeight = Dimensions.get("window").height;
 
 interface FooterItemProps {
   title: string;
@@ -20,85 +13,91 @@ interface FooterItemProps {
   onPress: () => void;
 }
 
-const FooterItem: React.FC<FooterItemProps> = ({
-  title,
-  icon,
-  isActive,
-  onPress,
-}) => {
+const FooterItem: React.FC<FooterItemProps> = ({ title, icon, isActive, onPress }) => {
+  const theme = useTheme();
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.customButton,
-        isActive ? styles.activeButton : styles.inactiveButton,
-      ]}
+    <TouchableRipple
       onPress={onPress}
+      rippleColor={theme.colors.primary + "20"}
+      borderless
+      style={[
+        styles.footerItemTouch,
+        isActive && { backgroundColor: theme.colors.primaryContainer },
+      ]}
     >
-      {icon}
-      <Text
-        style={[
-          styles.buttonText,
-          isActive ? styles.activeButtonText : styles.inactiveButtonText,
-        ]}
-      >
-        {title}
-      </Text>
-    </TouchableOpacity>
+      <View style={styles.footerItemContent}>
+        {icon}
+        <Text
+          variant="labelSmall"
+          style={[
+            styles.footerLabel,
+            {
+              color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant,
+              fontWeight: isActive ? "700" : "500",
+            },
+          ]}
+        >
+          {title}
+        </Text>
+      </View>
+    </TouchableRipple>
   );
 };
 
 export default function Footer() {
+  const theme = useTheme();
   const pathname = usePathname();
 
+  const isHome = pathname === "/" || pathname === "/Mapa";
+  const isReportar = pathname.startsWith("/reportar");
+  const isMaravilhas = pathname === "/maravilhas";
+
   return (
-    <View style={styles.footer}>
-      <View style={styles.buttonWrapper}>
-        <FooterItem
-          title="MAPA"
-          icon={
-            <Ionicons
-              name={pathname === "/" ? "map" : "map-outline"}
-              size={24}
-              color="black"
-            />
-          }
-          isActive={pathname === "/"}
-          onPress={() => router.push("/")}
-        />
-      </View>
-
-      <TouchableOpacity onPress={() => {router.push("/Login")}}>
-          <Image
-            source={require("../../../assets/images/button_alert.png")}
-            style={{
-              width: screenWidth * 0.2,
-              height: screenWidth * 0.2,
-              top: -screenWidth * 0.1,
-              borderRadius: 100,
-              backgroundColor: "transparent",
-            }}
+    <Surface style={styles.footer} elevation={4}>
+      <FooterItem
+        title="INÍCIO"
+        icon={
+          <Ionicons
+            name={isHome ? "home" : "home-outline"}
+            size={22}
+            color={isHome ? theme.colors.primary : theme.colors.onSurfaceVariant}
           />
-      </TouchableOpacity>
+        }
+        isActive={isHome}
+        onPress={() => router.push("/")}
+      />
 
-      <View style={styles.buttonWrapper}>
-        <FooterItem
-          title="APRENDER"
-          icon={
-            <Ionicons
-              name={
-                pathname === "/aprender"
-                  ? "game-controller"
-                  : "game-controller-outline"
-              }
-              size={24}
-              color="black"
-            />
-          }
-          isActive={pathname === "/aprender"}
-          onPress={() => router.push("/Aprender/aprender")}
-        />
-      </View>
-    </View>
+      <TouchableRipple
+        onPress={() => router.push("/reportar/infraestrutura")}
+        borderless
+        rippleColor={theme.colors.tertiary + "30"}
+        style={styles.fabWrapper}
+      >
+        <Surface
+          style={[
+            styles.fab,
+            { backgroundColor: isReportar ? theme.colors.primary : theme.colors.tertiary },
+          ]}
+          elevation={3}
+        >
+          <Ionicons name="megaphone" size={26} color="#fff" />
+        </Surface>
+      </TouchableRipple>
+
+      <FooterItem
+        title="MARAVILHAS"
+        icon={
+          <Ionicons
+            name={isMaravilhas ? "diamond" : "diamond-outline"}
+            size={22}
+            color={isMaravilhas ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          />
+        }
+        isActive={isMaravilhas}
+        onPress={() => router.push("/maravilhas" as any)}
+      />
+    </Surface>
   );
 }
 
@@ -106,43 +105,39 @@ const styles = StyleSheet.create({
   footer: {
     position: "absolute",
     width: screenWidth,
-    height: screenHeight * 0.1,
     bottom: 0,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    elevation: 5,
-    borderTopWidth: 1,
-    borderTopColor: "black",
-    backgroundColor: "white",
+    paddingVertical: 8,
+    paddingBottom: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
-  buttonWrapper: {
+  footerItemTouch: {
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    minWidth: 72,
+    alignItems: "center",
+  },
+  footerItemContent: {
     alignItems: "center",
     justifyContent: "center",
-    width: screenWidth * 0.25,
-    height: screenHeight * 0.25,
+    gap: 4,
   },
-  customButton: {
+  footerLabel: {
+    letterSpacing: 0.5,
+  },
+  fabWrapper: {
+    borderRadius: 28,
+    marginTop: -28,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 100,
-    width: screenWidth * 0.15,
-    height: screenWidth * 0.15,
-  },
-  inactiveButton: {
-    backgroundColor: "transparent",
-  },
-  activeButton: {
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
-  },
-  buttonText: {
-    fontSize: 10,
-    color: "black",
-  },
-  inactiveButtonText: {
-    fontWeight: "normal",
-  },
-  activeButtonText: {
-    fontWeight: "bold",
   },
 });

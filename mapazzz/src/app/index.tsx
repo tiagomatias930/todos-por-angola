@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Dimensions,
-  Image,
 } from "react-native";
+import {
+  Text,
+  Surface,
+  Button,
+  Card,
+  Chip,
+  useTheme,
+} from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,10 +20,12 @@ import {
   reportCategories,
   ReportCategory,
 } from "@/src/constants/reportCategories";
+import { appColors } from "@/src/config/theme";
 
 const screen = Dimensions.get("window");
 
 export default function HomeDashboard() {
+  const theme = useTheme();
   const [token, setToken] = useState<string | null>(null);
   const [loadingToken, setLoadingToken] = useState(true);
 
@@ -33,112 +40,189 @@ export default function HomeDashboard() {
         setLoadingToken(false);
       }
     };
-
     checkToken();
   }, []);
 
   const heroCta = useMemo(() => {
-    if (loadingToken) {
-      return "A preparar a sua experiência...";
-    }
+    if (loadingToken) return "A preparar a sua experiência...";
     return token
       ? "Obrigado por fazer parte da Angola Conectada. Explore as funcionalidades abaixo."
       : "Crie a sua conta ou inicie sessão para participar activamente na transformação da sua comunidade.";
   }, [loadingToken, token]);
 
+  const categoryColors: Record<string, string> = {
+    saude: appColors.health,
+    seguranca: appColors.security,
+    infraestrutura: appColors.infrastructure,
+    mapa: appColors.map,
+  };
+
   return (
-    <View style={styles.background}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <View style={[styles.background, { backgroundColor: theme.colors.background }]}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ─── Header ─── */}
         <View style={styles.header}>
-          <View>
-            {/* Logo imagem<Image
-            source={require("@/assets/images/logo.png")}
-            style={styles.heroImage}
-            resizeMode="contain"
-          />*/}
-            <Text style={styles.overline}>Plataforma GovTech</Text>
-            <Text style={styles.title}>Nova Angola</Text>
-            <Text style={styles.subtitle}>
-              Empoderamos cada cidadão a reportar, validar e resolver desafios urbanos com apoio de inteligência artificial.
+          <View style={styles.headerContent}>
+            <Chip
+              compact
+              mode="flat"
+              style={[styles.overlineChip, { backgroundColor: theme.colors.primaryContainer }]}
+              textStyle={{ color: theme.colors.onPrimaryContainer, fontSize: 11, fontWeight: "600" }}
+            >
+              Plataforma GovTech
+            </Chip>
+            <Text
+              variant="headlineLarge"
+              style={[styles.title, { color: theme.colors.primary }]}
+            >
+              Nova Angola
+            </Text>
+            <Text
+              variant="bodyMedium"
+              style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Empoderamos cada cidadão a reportar, validar e resolver desafios
+              urbanos com apoio de inteligência artificial.
             </Text>
           </View>
-
         </View>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>Seja a voz da sua comunidade</Text>
-          <Text style={styles.heroDescription}>{heroCta}</Text>
-          {!token && !loadingToken ? (
-            <View style={styles.authActions}>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => router.push("/Login")}
-              >
-                <Ionicons
-                  name="log-in"
-                  size={18}
-                  color="#fff"
-                  style={styles.inlineIcon}
-                />
-                <Text style={styles.primaryButtonText}>Entrar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => router.push("/registo")}
-              >
-                <Ionicons
-                  name="person-add"
-                  size={18}
-                  color="#0A3D62"
-                  style={styles.inlineIcon}
-                />
-                <Text style={styles.secondaryButtonText}>Criar Conta</Text>
-              </TouchableOpacity>
+        {/* ─── Hero Card ─── */}
+        <Surface style={[styles.heroCard, { backgroundColor: theme.colors.primary }]} elevation={3}>
+          <View style={styles.heroIconRow}>
+            <View style={styles.heroIconCircle}>
+              <Ionicons name="megaphone" size={22} color={theme.colors.primary} />
             </View>
-          ) : null}
-          <TouchableOpacity
-            style={styles.reportButton}
+          </View>
+          <Text variant="titleLarge" style={styles.heroTitle}>
+            Seja a voz da sua comunidade
+          </Text>
+          <Text variant="bodyMedium" style={styles.heroDescription}>
+            {heroCta}
+          </Text>
+
+          {!token && !loadingToken && (
+            <View style={styles.authActions}>
+              <Button
+                mode="contained"
+                icon="login"
+                onPress={() => router.push("/Login")}
+                style={styles.authButton}
+                contentStyle={styles.authButtonContent}
+                labelStyle={styles.authButtonLabel}
+                buttonColor="#FFFFFF"
+                textColor={theme.colors.primary}
+              >
+                Entrar
+              </Button>
+              <Button
+                mode="outlined"
+                icon="account-plus"
+                onPress={() => router.push("/registo")}
+                style={styles.authButton}
+                contentStyle={styles.authButtonContent}
+                labelStyle={styles.authButtonLabel}
+                textColor="#FFFFFF"
+                theme={{ colors: { outline: "rgba(255,255,255,0.5)" } }}
+              >
+                Criar Conta
+              </Button>
+            </View>
+          )}
+
+          <Button
+            mode="contained"
+            icon="bullhorn"
             onPress={() => router.push("/reportar/infraestrutura")}
+            style={styles.reportButton}
+            contentStyle={styles.reportButtonContent}
+            labelStyle={styles.reportButtonLabel}
+            buttonColor={theme.colors.tertiary}
+            textColor="#FFFFFF"
           >
-            <Ionicons
-              name="megaphone"
-              size={18}
-              color="#fff"
-              style={styles.inlineIcon}
-            />
-            <Text style={styles.reportButtonText}>Reportar Agora</Text>
-          </TouchableOpacity>
-        </View>
+            Reportar Agora
+          </Button>
+        </Surface>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Ações rápidas</Text>
-          <Text style={styles.sectionSubtitle}>
-            Escolha uma categoria para começar imediatamente.
+        {/* ─── Ações rápidas (só visível após login) ─── */}
+        {token && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleLarge" style={{ color: theme.colors.onSurface }}>
+                Ações rápidas
+              </Text>
+              <Text
+                variant="bodySmall"
+                style={[styles.sectionSubtitle, { color: theme.colors.onSurfaceVariant }]}
+              >
+                Escolha uma categoria para começar imediatamente.
+              </Text>
+            </View>
+
+            <View style={styles.cardsGrid}>
+              {reportCategories.map((action: ReportCategory) => (
+                <Card
+                  key={action.id}
+                  mode="elevated"
+                  style={styles.card}
+                  onPress={() => router.push(action.route as any)}
+                >
+                  <Card.Content style={styles.cardContent}>
+                    <View
+                      style={[
+                        styles.cardIconWrapper,
+                        {
+                          backgroundColor:
+                            (categoryColors[action.id] || theme.colors.primary) + "18",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={action.icon as any}
+                        size={24}
+                        color={categoryColors[action.id] || theme.colors.primary}
+                      />
+                    </View>
+                    <Text
+                      variant="titleSmall"
+                      style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+                    >
+                      {action.title}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      style={[styles.cardDescription, { color: theme.colors.onSurfaceVariant }]}
+                    >
+                      {action.description}
+                    </Text>
+                  </Card.Content>
+                </Card>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* ─── What's next ─── */}
+        <Surface style={styles.comingSoonCard} elevation={1}>
+          <View style={styles.comingSoonIcon}>
+            <Ionicons name="rocket" size={28} color={theme.colors.primary} />
+          </View>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            O que vem a seguir?
           </Text>
-        </View>
-
-        <View style={styles.cardsGrid}>
-          {reportCategories.map((action: ReportCategory) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.card}
-              onPress={() => router.push(action.route as any)}
-            >
-              <View style={styles.cardIconWrapper}>
-                <Ionicons name={action.icon as any} size={24} color="#0A3D62" />
-              </View>
-              <Text style={styles.cardTitle}>{action.title}</Text>
-              <Text style={styles.cardDescription}>{action.description}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>O que vem a seguir?</Text>
-          <Text style={styles.sectionSubtitle}>
-            Acompanhe o progresso das suas denúncias, receba feedback das autoridades e partilhe histórias de impacto.
+          <Text
+            variant="bodySmall"
+            style={[styles.comingSoonText, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Acompanhe o progresso das suas denúncias, receba feedback das
+            autoridades e partilhe histórias de impacto.
           </Text>
-        </View>
+        </Surface>
+
+        <View style={{ height: 32 }} />
       </ScrollView>
     </View>
   );
@@ -147,7 +231,6 @@ export default function HomeDashboard() {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: "#F2F6FF",
   },
   container: {
     paddingHorizontal: 20,
@@ -155,154 +238,137 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: 56,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: 8,
   },
-  overline: {
-    color: "#0A3D62",
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  headerContent: {
+    maxWidth: screen.width * 0.85,
+  },
+  overlineChip: {
+    alignSelf: "flex-start",
+    marginBottom: 12,
+    borderRadius: 20,
   },
   title: {
-    marginTop: 4,
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#0A3D62",
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
   subtitle: {
-    marginTop: 10,
-    fontSize: 14,
-    color: "#112",
-    maxWidth: screen.width * 0.55,
-  },
-  heroImage: {
-    width: screen.width * 0.28,
-    height: screen.width * 0.28,
+    marginTop: 12,
+    lineHeight: 22,
   },
   heroCard: {
-    marginTop: 32,
-    backgroundColor: "#0A3D62",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#0A3D62",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    marginTop: 24,
+    borderRadius: 24,
+    padding: 24,
+    overflow: "hidden",
+  },
+  heroIconRow: {
+    marginBottom: 16,
+  },
+  heroIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "700",
+    marginBottom: 8,
   },
   heroDescription: {
-    color: "#E3F5FF",
-    marginTop: 10,
-    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.85)",
+    marginBottom: 4,
+    lineHeight: 22,
   },
   authActions: {
-    marginTop: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 8,
-    backgroundColor: "#1B98F5",
-    borderRadius: 30,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginLeft: 8,
-    backgroundColor: "#E3F5FF",
-    borderRadius: 30,
-  },
-  secondaryButtonText: {
-    color: "#0A3D62",
-    fontWeight: "600",
-  },
-  reportButton: {
     marginTop: 20,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    backgroundColor: "#FF6B3C",
-    borderRadius: 30,
-    paddingVertical: 14,
+    gap: 10,
   },
-  reportButtonText: {
-    color: "#fff",
+  authButton: {
+    flex: 1,
+    borderRadius: 100,
+  },
+  authButtonContent: {
+    height: 44,
+  },
+  authButtonLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  reportButton: {
+    marginTop: 16,
+    borderRadius: 100,
+  },
+  reportButtonContent: {
+    height: 48,
+  },
+  reportButtonLabel: {
+    fontSize: 14,
     fontWeight: "700",
-  },
-  inlineIcon: {
-    marginRight: 8,
+    letterSpacing: 0.3,
   },
   sectionHeader: {
     marginTop: 36,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0A3D62",
+    marginBottom: 4,
   },
   sectionSubtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    color: "#3F536C",
+    marginTop: 4,
   },
   cardsGrid: {
-    marginTop: 20,
+    marginTop: 16,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: 12,
   },
   card: {
     width: "47%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#0A3D62",
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  cardContent: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
   },
   cardIconWrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#E3F5FF",
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   cardTitle: {
-    fontSize: 16,
     fontWeight: "600",
-    color: "#0A3D62",
+    marginBottom: 6,
   },
   cardDescription: {
-    marginTop: 6,
-    fontSize: 12,
-    color: "#3F536C",
+    lineHeight: 17,
+  },
+  comingSoonCard: {
+    marginTop: 28,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+  },
+  comingSoonIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(21, 101, 192, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  comingSoonText: {
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: "90%",
   },
 });

@@ -1,17 +1,24 @@
 import React, { useState, useCallback } from 'react';
+import { ENV } from '@/src/config/env';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ImageBackground,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import {
+  Text,
+  TextInput,
+  Button,
+  Surface,
+  useTheme,
+  ActivityIndicator,
+  HelperText,
+  IconButton,
+} from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { cadastrarUsuario } from '@/src/services/userService';
@@ -20,6 +27,7 @@ import { validarNIF, validarTelefone, nomeCorrespondeAoNIF } from '@/src/service
 type ValidationStatus = 'idle' | 'loading' | 'valid' | 'invalid';
 
 export default function RegisterScreen() {
+  const theme = useTheme();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -29,49 +37,37 @@ export default function RegisterScreen() {
   const [secureEntry, setSecureEntry] = useState(true);
   const [secureEntry1, setSecureEntry1] = useState(true);
 
-  // Validation states
   const [nifStatus, setNifStatus] = useState<ValidationStatus>('idle');
   const [nifMessage, setNifMessage] = useState('');
-  const [nifNome, setNifNome] = useState('');  // nome retornado pela API do NIF
+  const [nifNome, setNifNome] = useState('');
   const [phoneStatus, setPhoneStatus] = useState<ValidationStatus>('idle');
   const [phoneMessage, setPhoneMessage] = useState('');
 
-  // Debounce timer refs
   const nifTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const phoneTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── NIF validation with debounce ──
   const handleNifChange = useCallback((value: string) => {
     setEmail(value);
     setNifStatus('idle');
     setNifMessage('');
     setNifNome('');
-
     if (nifTimerRef.current) clearTimeout(nifTimerRef.current);
-
-    // NIF angolano tem tipicamente 14 caracteres (ex: 006151112LA041)
     if (value.length >= 10) {
       setNifStatus('loading');
       nifTimerRef.current = setTimeout(async () => {
         const result = await validarNIF(value);
         setNifStatus(result.success ? 'valid' : 'invalid');
         setNifMessage(result.message);
-        if (result.success && result.nome) {
-          setNifNome(result.nome);
-        }
+        if (result.success && result.nome) setNifNome(result.nome);
       }, 800);
     }
   }, []);
 
-  // ── Phone validation with debounce ──
   const handlePhoneChange = useCallback((value: string) => {
     setTelefone(value);
     setPhoneStatus('idle');
     setPhoneMessage('');
-
     if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
-
-    // Telefone angolano: 9 dígitos sem prefixo ou 12+ com prefixo
     if (value.length >= 9) {
       setPhoneStatus('loading');
       phoneTimerRef.current = setTimeout(async () => {
@@ -82,22 +78,20 @@ export default function RegisterScreen() {
     }
   }, []);
 
-  // ── Status icon helper ──
-  const renderStatusIcon = (status: ValidationStatus) => {
-    switch (status) {
-      case 'loading':
-        return <ActivityIndicator size="small" color="#1B98F5" style={{ marginLeft: 6 }} />;
-      case 'valid':
-        return <Ionicons name="checkmark-circle" size={20} color="#16A085" style={{ marginLeft: 6 }} />;
-      case 'invalid':
-        return <Ionicons name="close-circle" size={20} color="#FF6B3C" style={{ marginLeft: 6 }} />;
-      default:
-        return null;
-    }
+  const getOutlineColor = (status: ValidationStatus) => {
+    if (status === 'valid') return theme.colors.secondary;
+    if (status === 'invalid') return theme.colors.error;
+    return undefined;
+  };
+
+  const getStatusIcon = (status: ValidationStatus) => {
+    if (status === 'loading') return 'loading';
+    if (status === 'valid') return 'check-circle';
+    if (status === 'invalid') return 'close-circle';
+    return undefined;
   };
 
   const cadastro = async () => {
-    // Validações básicas
     if (!nome || !email || !telefone || !password || !password1) {
       Alert.alert('Atenção', 'Preencha todos os campos para continuar.');
       return;
@@ -111,7 +105,6 @@ export default function RegisterScreen() {
       return;
     }
 
-    // Validar NIF antes de submeter (se ainda não foi validado)
     if (nifStatus !== 'valid') {
       setNifStatus('loading');
       const nifResult = await validarNIF(email);
@@ -123,27 +116,18 @@ export default function RegisterScreen() {
       }
       if (nifResult.nome) {
         setNifNome(nifResult.nome);
-        // Verificar se o nome digitado corresponde ao nome do NIF
         if (!nomeCorrespondeAoNIF(nome, nifResult.nome)) {
-          Alert.alert(
-            'Nome não corresponde',
-            `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifResult.nome}`,
-          );
+          Alert.alert('Nome não corresponde', `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifResult.nome}`);
           return;
         }
       }
     } else if (nifNome) {
-      // NIF já foi validado, mas verifica se o nome ainda corresponde
       if (!nomeCorrespondeAoNIF(nome, nifNome)) {
-        Alert.alert(
-          'Nome não corresponde',
-          `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifNome}`,
-        );
+        Alert.alert('Nome não corresponde', `O nome digitado não corresponde ao NIF.\n\nNome no NIF: ${nifNome}`);
         return;
       }
     }
 
-    // Validar telefone antes de submeter (se ainda não foi validado)
     if (phoneStatus !== 'valid') {
       setPhoneStatus('loading');
       const phoneResult = await validarTelefone(telefone);
@@ -157,12 +141,9 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      // Registar no Supabase
       await cadastrarUsuario({ nome, email, telefone, password });
-
-      // Também registar na API externa (mantém a lógica existente)
       try {
-        await fetch('https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/cadastro', {
+        await fetch(`${ENV.API_BASE_URL}/cadastro`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome, email, telefone, password }),
@@ -170,7 +151,6 @@ export default function RegisterScreen() {
       } catch {
         console.warn('API externa indisponível, mas Supabase registou com sucesso.');
       }
-
       Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.', [
         { text: 'OK', onPress: () => router.replace('/Login') },
       ]);
@@ -183,7 +163,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Top section with brand background */}
+      {/* ─── Top Brand Section ─── */}
       <View style={styles.topSection}>
         <ImageBackground
           source={require('@/assets/images/background-image1.png')}
@@ -191,14 +171,20 @@ export default function RegisterScreen() {
         >
           <View style={styles.overlay} />
           <View style={styles.brandContainer}>
-            <Ionicons name="person-add" size={44} color="#fff" />
-            <Text style={styles.brandTitle}>Criar Conta</Text>
-            <Text style={styles.brandSubtitle}>Nova Angola</Text>
+            <Surface style={styles.brandIconSurface} elevation={0}>
+              <Ionicons name="person-add" size={36} color="#fff" />
+            </Surface>
+            <Text variant="headlineSmall" style={styles.brandTitle}>
+              Criar Conta
+            </Text>
+            <Text variant="labelSmall" style={styles.brandSubtitle}>
+              Nova Angola
+            </Text>
           </View>
         </ImageBackground>
       </View>
 
-      {/* Bottom section with form */}
+      {/* ─── Bottom Form Section ─── */}
       <KeyboardAvoidingView
         style={styles.bottomSection}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -208,155 +194,188 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.formCard}>
+          <Surface style={styles.formCard} elevation={2}>
             {/* Back button */}
-            <TouchableOpacity style={styles.backRow} onPress={() => router.back()}>
-              <Ionicons name="arrow-back-outline" size={20} color="#0A3D62" />
-              <Text style={styles.backText}>Voltar</Text>
-            </TouchableOpacity>
+            <IconButton
+              icon="arrow-left"
+              mode="contained-tonal"
+              size={20}
+              onPress={() => router.back()}
+              style={styles.backButton}
+            />
 
-            <Text style={styles.title}>Registo de Utilizador</Text>
-            <Text style={styles.description}>
+            <Text variant="headlineSmall" style={[styles.title, { color: theme.colors.onSurface }]}>
+              Registo de Utilizador
+            </Text>
+            <Text variant="bodyMedium" style={[styles.description, { color: theme.colors.onSurfaceVariant }]}>
               Preencha os seus dados para fazer parte da comunidade Nova Angola.
             </Text>
 
             {/* Nome */}
-            <View style={styles.inputContainer}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="person-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Primeiro e Último Nome"
-                placeholderTextColor="#8BA3C7"
-                style={styles.input}
-                value={nome}
-                onChangeText={setNome}
-              />
-            </View>
+            <TextInput
+              label="Primeiro e Último Nome"
+              value={nome}
+              onChangeText={setNome}
+              mode="outlined"
+              left={<TextInput.Icon icon="account-outline" />}
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              theme={{ roundness: 14 }}
+            />
 
-            {/* NIF — com validação em tempo real */}
-            <View style={[
-              styles.inputContainer,
-              nifStatus === 'valid' && styles.inputValid,
-              nifStatus === 'invalid' && styles.inputInvalid,
-            ]}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="card-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="NIF (ex: 006151112LA041)"
-                placeholderTextColor="#8BA3C7"
-                style={styles.input}
-                value={email}
-                onChangeText={handleNifChange}
-                autoCapitalize="characters"
-              />
-              {renderStatusIcon(nifStatus)}
-            </View>
+            {/* NIF */}
+            <TextInput
+              label="NIF (ex: 006151112LA041)"
+              value={email}
+              onChangeText={handleNifChange}
+              autoCapitalize="characters"
+              mode="outlined"
+              left={<TextInput.Icon icon="card-account-details-outline" />}
+              right={
+                nifStatus === 'loading' ? (
+                  <TextInput.Icon icon="loading" />
+                ) : nifStatus === 'valid' ? (
+                  <TextInput.Icon icon="check-circle" color={theme.colors.secondary} />
+                ) : nifStatus === 'invalid' ? (
+                  <TextInput.Icon icon="close-circle" color={theme.colors.error} />
+                ) : undefined
+              }
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              outlineColor={getOutlineColor(nifStatus)}
+              activeOutlineColor={getOutlineColor(nifStatus) || theme.colors.primary}
+              theme={{ roundness: 14 }}
+            />
             {nifMessage ? (
-              <Text style={[styles.validationMsg, nifStatus === 'valid' ? styles.validMsg : styles.invalidMsg]}>
+              <HelperText
+                type={nifStatus === 'valid' ? 'info' : 'error'}
+                visible
+                style={styles.helperText}
+              >
                 {nifMessage}
-              </Text>
+              </HelperText>
             ) : null}
 
-            {/* Telefone — com validação em tempo real */}
-            <View style={[
-              styles.inputContainer,
-              phoneStatus === 'valid' && styles.inputValid,
-              phoneStatus === 'invalid' && styles.inputInvalid,
-            ]}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="call-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Telefone (ex: 923445618)"
-                placeholderTextColor="#8BA3C7"
-                style={styles.input}
-                value={telefone}
-                onChangeText={handlePhoneChange}
-                keyboardType="phone-pad"
-              />
-              {renderStatusIcon(phoneStatus)}
-            </View>
+            {/* Telefone */}
+            <TextInput
+              label="Telefone (ex: 923445618)"
+              value={telefone}
+              onChangeText={handlePhoneChange}
+              keyboardType="phone-pad"
+              mode="outlined"
+              left={<TextInput.Icon icon="phone-outline" />}
+              right={
+                phoneStatus === 'loading' ? (
+                  <TextInput.Icon icon="loading" />
+                ) : phoneStatus === 'valid' ? (
+                  <TextInput.Icon icon="check-circle" color={theme.colors.secondary} />
+                ) : phoneStatus === 'invalid' ? (
+                  <TextInput.Icon icon="close-circle" color={theme.colors.error} />
+                ) : undefined
+              }
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              outlineColor={getOutlineColor(phoneStatus)}
+              activeOutlineColor={getOutlineColor(phoneStatus) || theme.colors.primary}
+              theme={{ roundness: 14 }}
+            />
             {phoneMessage ? (
-              <Text style={[styles.validationMsg, phoneStatus === 'valid' ? styles.validMsg : styles.invalidMsg]}>
+              <HelperText
+                type={phoneStatus === 'valid' ? 'info' : 'error'}
+                visible
+                style={styles.helperText}
+              >
                 {phoneMessage}
-              </Text>
+              </HelperText>
             ) : null}
 
             {/* Senha */}
-            <View style={styles.inputContainer}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Senha"
-                placeholderTextColor="#8BA3C7"
-                secureTextEntry={secureEntry}
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)} style={styles.eyeButton}>
-                <Ionicons name={secureEntry ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8BA3C7" />
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              label="Senha"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secureEntry}
+              mode="outlined"
+              left={<TextInput.Icon icon="lock-outline" />}
+              right={
+                <TextInput.Icon
+                  icon={secureEntry ? 'eye-off-outline' : 'eye-outline'}
+                  onPress={() => setSecureEntry(!secureEntry)}
+                />
+              }
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              theme={{ roundness: 14 }}
+            />
 
             {/* Confirmar Senha */}
-            <View style={[
-              styles.inputContainer,
-              password1.length > 0 && password1 === password && styles.inputValid,
-              password1.length > 0 && password1 !== password && styles.inputInvalid,
-            ]}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Confirmar Senha"
-                placeholderTextColor="#8BA3C7"
-                secureTextEntry={secureEntry1}
-                style={styles.input}
-                value={password1}
-                onChangeText={setPassword1}
-              />
-              <TouchableOpacity onPress={() => setSecureEntry1(!secureEntry1)} style={styles.eyeButton}>
-                <Ionicons name={secureEntry1 ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8BA3C7" />
-              </TouchableOpacity>
-              {password1.length > 0 && (
-                password1 === password
-                  ? <Ionicons name="checkmark-circle" size={20} color="#16A085" style={{ marginLeft: 2 }} />
-                  : <Ionicons name="close-circle" size={20} color="#FF6B3C" style={{ marginLeft: 2 }} />
-              )}
-            </View>
-            {password1.length > 0 && password1 !== password ? (
-              <Text style={[styles.validationMsg, styles.invalidMsg]}>As senhas não coincidem.</Text>
-            ) : null}
+            <TextInput
+              label="Confirmar Senha"
+              value={password1}
+              onChangeText={setPassword1}
+              secureTextEntry={secureEntry1}
+              mode="outlined"
+              left={<TextInput.Icon icon="lock-outline" />}
+              right={
+                <TextInput.Icon
+                  icon={secureEntry1 ? 'eye-off-outline' : 'eye-outline'}
+                  onPress={() => setSecureEntry1(!secureEntry1)}
+                />
+              }
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              outlineColor={
+                password1.length > 0
+                  ? password1 === password
+                    ? theme.colors.secondary
+                    : theme.colors.error
+                  : undefined
+              }
+              theme={{ roundness: 14 }}
+            />
+            {password1.length > 0 && password1 !== password && (
+              <HelperText type="error" visible style={styles.helperText}>
+                As senhas não coincidem.
+              </HelperText>
+            )}
 
             {/* Register Button */}
-            <TouchableOpacity
-              style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+            <Button
+              mode="contained"
               onPress={cadastro}
               disabled={loading}
-              activeOpacity={0.85}
+              loading={loading}
+              icon={loading ? undefined : 'check-circle-outline'}
+              style={styles.registerButton}
+              contentStyle={styles.registerButtonContent}
+              labelStyle={styles.registerButtonLabel}
+              buttonColor={theme.colors.primary}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.registerText}>Registrar</Text>
-                </>
-              )}
-            </TouchableOpacity>
+              {loading ? 'A registar...' : 'Registrar'}
+            </Button>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginHorizontal: 12 }}>
+                ou
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+            </View>
 
             {/* Login link */}
-            <TouchableOpacity onPress={() => router.push('/Login')} style={styles.loginRow}>
-              <Text style={styles.loginLinkText}>
-                Já tenho uma conta?{' '}
-                <Text style={styles.loginLink}>Entrar</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <Button
+              mode="outlined"
+              icon="login"
+              onPress={() => router.push('/Login')}
+              style={styles.loginButton}
+              contentStyle={styles.loginButtonContent}
+              labelStyle={[styles.loginButtonLabel, { color: theme.colors.primary }]}
+              theme={{ roundness: 100 }}
+            >
+              Já tenho conta — Entrar
+            </Button>
+          </Surface>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -366,12 +385,12 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F6FF',
+    backgroundColor: '#F8FAFE',
   },
 
-  /* ───── Top brand section ───── */
+  /* ─── Top brand section ─── */
   topSection: {
-    flex: 0.28,
+    flex: 0.26,
     overflow: 'hidden',
   },
   imageBackground: {
@@ -383,165 +402,109 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 61, 98, 0.75)',
+    backgroundColor: 'rgba(21, 101, 192, 0.82)',
   },
   brandContainer: {
     alignItems: 'center',
     zIndex: 1,
   },
+  brandIconSurface: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   brandTitle: {
-    marginTop: 10,
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   brandSubtitle: {
     marginTop: 4,
-    fontSize: 12,
-    color: '#E3F5FF',
+    color: 'rgba(255,255,255,0.8)',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    fontWeight: '600',
   },
 
-  /* ───── Bottom form section ───── */
+  /* ─── Bottom form section ─── */
   bottomSection: {
-    flex: 0.72,
+    flex: 0.74,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingBottom: 32,
   },
   formCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 28,
     padding: 24,
-    marginTop: -28,
-    shadowColor: '#0A3D62',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    marginTop: -20,
   },
 
-  /* ───── Back button ───── */
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  backText: {
-    color: '#0A3D62',
-    fontWeight: '600',
-    marginLeft: 6,
-    fontSize: 14,
+  /* ─── Back button ─── */
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
   },
 
   title: {
-    fontSize: 21,
-    fontWeight: 'bold',
-    color: '#0A3D62',
+    fontWeight: '700',
     marginBottom: 6,
   },
   description: {
-    fontSize: 13,
-    color: '#3F536C',
-    marginBottom: 22,
-    lineHeight: 19,
-  },
-
-  /* ───── Inputs ───── */
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F6FF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 50,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E3F5FF',
-  },
-  inputValid: {
-    borderColor: '#16A085',
-    borderWidth: 1.5,
-  },
-  inputInvalid: {
-    borderColor: '#FF6B3C',
-    borderWidth: 1.5,
-  },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E3F5FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
+    marginBottom: 20,
+    lineHeight: 21,
   },
   input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 15,
-    color: '#0A3D62',
-  },
-  eyeButton: {
-    padding: 6,
-  },
-
-  /* ───── Validation messages ───── */
-  validationMsg: {
-    fontSize: 12,
-    marginTop: -8,
     marginBottom: 10,
-    marginLeft: 54,
+    backgroundColor: 'transparent',
   },
-  validMsg: {
-    color: '#16A085',
+  inputOutline: {
+    borderRadius: 14,
   },
-  invalidMsg: {
-    color: '#FF6B3C',
+  helperText: {
+    marginTop: -8,
+    marginBottom: 4,
+    paddingLeft: 8,
   },
 
-  /* ───── Register button ───── */
+  /* ─── Register button ─── */
   registerButton: {
-    flexDirection: 'row',
-    backgroundColor: '#0A3D62',
-    borderRadius: 30,
-    width: '100%',
+    marginTop: 8,
+    borderRadius: 100,
+  },
+  registerButtonContent: {
     height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-    shadowColor: '#0A3D62',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
-  registerButtonDisabled: {
-    opacity: 0.7,
-  },
-  registerText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+  registerButtonLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
-  /* ───── Login link ───── */
-  loginRow: {
-    marginTop: 20,
+  /* ─── Divider ─── */
+  dividerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 18,
   },
-  loginLinkText: {
-    color: '#3F536C',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+
+  /* ─── Login button ─── */
+  loginButton: {
+    borderRadius: 100,
+  },
+  loginButtonContent: {
+    height: 48,
+  },
+  loginButtonLabel: {
     fontSize: 14,
-  },
-  loginLink: {
-    color: '#1B98F5',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });

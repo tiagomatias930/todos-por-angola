@@ -11,7 +11,7 @@ export const ENV = {
   SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzdnNod2xna21iaXVneHlqenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NjE1NDQsImV4cCI6MjA4NjQzNzU0NH0.PReWpXGmJgEP8plHs8zgSCJtosLz7GmLPIWNUuynckM",
 
   // Backend API Configuration
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || "https://api.novaangola.local",
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000",
 
   // App Configuration
   APP_NAME: "Nova Angola",

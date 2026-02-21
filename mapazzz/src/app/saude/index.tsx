@@ -1,34 +1,38 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  TextInput,
-  ActivityIndicator,
   Alert,
 } from "react-native";
+import {
+  Text,
+  Surface,
+  Button,
+  Card,
+  TextInput,
+  Chip,
+  Divider,
+  Banner,
+  useTheme,
+  ActivityIndicator,
+} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router } from "expo-router";
 import { analyzeHealthSymptomsWithGemini, SymptomAnalysisResult } from "@/src/services/gemini";
 import { getCategoryById } from "@/src/constants/reportCategories";
+import { appColors } from "@/src/config/theme";
 
 type UrgencyLevel = "baixa" | "moderada" | "alta";
 
-const urgencyColors = {
-  baixa: "#16A085",
-  moderada: "#F39C12",
-  alta: "#E74C3C",
-};
-
-const urgencyLabels = {
-  baixa: "Baixa",
-  moderada: "Moderada",
-  alta: "Alta",
+const urgencyConfig = {
+  baixa: { color: appColors.urgencyLow, label: "Baixa", icon: "checkmark-circle" },
+  moderada: { color: appColors.urgencyMedium, label: "Moderada", icon: "information-circle" },
+  alta: { color: appColors.urgencyHigh, label: "Alta", icon: "alert" },
 };
 
 export default function HealthAssistantScreen() {
+  const theme = useTheme();
   const [symptoms, setSymptoms] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<SymptomAnalysisResult | null>(null);
@@ -38,13 +42,9 @@ export default function HealthAssistantScreen() {
 
   const handleAnalyzeSymptoms = async () => {
     if (!symptoms.trim()) {
-      Alert.alert(
-        "Campo obrigatório",
-        "Por favor, descreva seus sintomas antes de prosseguir."
-      );
+      Alert.alert("Campo obrigatório", "Por favor, descreva seus sintomas antes de prosseguir.");
       return;
     }
-
     setIsAnalyzing(true);
     try {
       const analysisResult = await analyzeHealthSymptomsWithGemini(symptoms);
@@ -52,10 +52,7 @@ export default function HealthAssistantScreen() {
       setShowResult(true);
     } catch (error) {
       console.error("Erro ao analisar sintomas:", error);
-      Alert.alert(
-        "Erro",
-        "Não foi possível analisar seus sintomas. Tente novamente."
-      );
+      Alert.alert("Erro", "Não foi possível analisar seus sintomas. Tente novamente.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -72,204 +69,218 @@ export default function HealthAssistantScreen() {
       "Emergência Médica",
       "Se você está tendo uma emergência médica, ligue para 112 imediatamente.",
       [
-        {
-          text: "Entendi",
-          onPress: () => router.push("/"),
-        },
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
+        { text: "Entendi", onPress: () => router.push("/") },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   };
 
+  // ─── Results view ───
   if (showResult && result) {
+    const urgency = urgencyConfig[result.urgencyLevel];
+
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Stack.Screen options={{ title: "Análise de Sintomas" }} />
 
+        {/* Urgency header */}
         <View style={styles.resultHeader}>
-          <View
-            style={[
-              styles.urgencyBadge,
-              { backgroundColor: urgencyColors[result.urgencyLevel] },
-            ]}
+          <Chip
+            mode="flat"
+            style={[styles.urgencyChip, { backgroundColor: urgency.color }]}
+            textStyle={{ color: "#fff", fontWeight: "700", fontSize: 12 }}
           >
-            <Text style={styles.urgencyBadgeText}>
-              {urgencyLabels[result.urgencyLevel]}
-            </Text>
-          </View>
-          <Text style={styles.resultTitle}>Resultado da Análise</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.summarySection}>
-            <View
-              style={[
-                styles.iconCircle,
-                { backgroundColor: urgencyColors[result.urgencyLevel] },
-              ]}
-            >
-              <Ionicons
-                name={
-                  result.urgencyLevel === "alta"
-                    ? "alert"
-                    : result.urgencyLevel === "moderada"
-                    ? "information-circle"
-                    : "checkmark-circle"
-                }
-                size={24}
-                color="#fff"
-              />
-            </View>
-            <View style={styles.summaryText}>
-              <Text style={styles.summaryTitle}>Avaliação Preliminar</Text>
-              <Text style={styles.summaryContent}>{result.summary}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.recommendationsSection}>
-            <Text style={styles.sectionTitle}>Recomendações</Text>
-            {result.recommendations.map((rec, index) => (
-              <View key={index} style={styles.recommendationItem}>
-                <View style={styles.bullet} />
-                <Text style={styles.recommendationText}>{rec}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.disclaimerCard}>
-          <Ionicons
-            name="warning"
-            size={16}
-            color="#E74C3C"
-            style={styles.disclaimerIcon}
-          />
-          <Text style={styles.disclaimerText}>
-            Esta é uma triagem automática e não substitui uma consulta médica
-            profissional. Para diagnóstico completo, procure um profissional de
-            saúde.
+            {urgency.label}
+          </Chip>
+          <Text variant="headlineSmall" style={[styles.resultTitle, { color: theme.colors.onSurface }]}>
+            Resultado da Análise
           </Text>
         </View>
 
+        {/* Summary Card */}
+        <Card mode="elevated" style={styles.resultCard}>
+          <Card.Content>
+            <View style={styles.summaryRow}>
+              <Surface
+                style={[styles.urgencyIconCircle, { backgroundColor: urgency.color }]}
+                elevation={0}
+              >
+                <Ionicons name={urgency.icon as any} size={24} color="#fff" />
+              </Surface>
+              <View style={styles.summaryContent}>
+                <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+                  Avaliação Preliminar
+                </Text>
+                <Text variant="bodySmall" style={[styles.summaryText, { color: theme.colors.onSurfaceVariant }]}>
+                  {result.summary}
+                </Text>
+              </View>
+            </View>
+
+            <Divider style={styles.resultDivider} />
+
+            <Text variant="titleSmall" style={[styles.recTitle, { color: theme.colors.onSurface }]}>
+              Recomendações
+            </Text>
+            {result.recommendations.map((rec: string, index: number) => (
+              <View key={index} style={styles.recItem}>
+                <View style={[styles.recBullet, { backgroundColor: theme.colors.primary }]} />
+                <Text variant="bodySmall" style={[styles.recText, { color: theme.colors.onSurfaceVariant }]}>
+                  {rec}
+                </Text>
+              </View>
+            ))}
+          </Card.Content>
+        </Card>
+
+        {/* Disclaimer */}
+        <Surface style={[styles.disclaimerCard, { backgroundColor: theme.colors.errorContainer }]} elevation={0}>
+          <Ionicons name="warning" size={16} color={theme.colors.error} />
+          <Text variant="bodySmall" style={[styles.disclaimerText, { color: theme.colors.onErrorContainer }]}>
+            Esta é uma triagem automática e não substitui uma consulta médica profissional.
+          </Text>
+        </Surface>
+
         {result.urgencyLevel === "alta" && (
-          <TouchableOpacity
-            style={styles.emergencyButton}
+          <Button
+            mode="contained"
+            icon="phone"
             onPress={handleEmergency}
+            style={styles.emergencyBtn}
+            contentStyle={styles.btnContent}
+            buttonColor={appColors.urgencyHigh}
+            textColor="#fff"
           >
-            <Ionicons name="call" size={18} color="#fff" />
-            <Text style={styles.emergencyButtonText}>Chamar Emergência (112)</Text>
-          </TouchableOpacity>
+            Chamar Emergência (112)
+          </Button>
         )}
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleReset}>
-          <Ionicons name="refresh" size={18} color="#fff" style={styles.icon} />
-          <Text style={styles.primaryButtonText}>Nova Análise</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => router.push("/")}
+        <Button
+          mode="contained"
+          icon="refresh"
+          onPress={handleReset}
+          style={styles.primaryBtn}
+          contentStyle={styles.btnContent}
+          labelStyle={styles.btnLabel}
         >
-          <Ionicons name="home" size={18} color="#0A3D62" style={styles.icon} />
-          <Text style={styles.secondaryButtonText}>Voltar ao início</Text>
-        </TouchableOpacity>
+          Nova Análise
+        </Button>
+
+        <Button
+          mode="outlined"
+          icon="home"
+          onPress={() => router.push("/")}
+          style={styles.outlinedBtn}
+          contentStyle={styles.btnContent}
+          labelStyle={[styles.btnLabel, { color: theme.colors.onSurface }]}
+        >
+          Voltar ao início
+        </Button>
       </ScrollView>
     );
   }
 
+  // ─── Input view ───
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+      showsVerticalScrollIndicator={false}
+    >
       <Stack.Screen options={{ title: "Saúde & Primeiros Socorros" }} />
 
+      {/* Header */}
       <View style={styles.headerWrapper}>
-        <View
-          style={[
-            styles.iconBadge,
-            { backgroundColor: healthCategory?.highlightColor || "#1B98F5" },
-          ]}
+        <Surface
+          style={[styles.iconBadge, { backgroundColor: (healthCategory?.highlightColor || appColors.health) + '18' }]}
+          elevation={0}
         >
-          <Ionicons name="medkit" size={28} color="#fff" />
-        </View>
-        <Text style={styles.title}>Saúde & Primeiros Socorros</Text>
-        <Text style={styles.subtitle}>
+          <Ionicons name="medkit" size={28} color={healthCategory?.highlightColor || appColors.health} />
+        </Surface>
+        <Text variant="headlineSmall" style={[styles.screenTitle, { color: theme.colors.onSurface }]}>
+          Saúde & Primeiros Socorros
+        </Text>
+        <Text variant="bodyMedium" style={[styles.screenSubtitle, { color: theme.colors.onSurfaceVariant }]}>
           Receba orientação imediata para sintomas e emergências leves.
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Descreva seus sintomas</Text>
-        <Text style={styles.cardSubtitle}>
-          Forneça detalhes para uma melhor avaliação:
-        </Text>
+      {/* Symptoms Card */}
+      <Card mode="elevated" style={styles.symptomsCard}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "600" }}>
+            Descreva seus sintomas
+          </Text>
+          <Text variant="bodySmall" style={[styles.cardHint, { color: theme.colors.onSurfaceVariant }]}>
+            Forneça detalhes para uma melhor avaliação:
+          </Text>
 
-        <TextInput
-          style={styles.textInput}
-          placeholder="Ex: Dor de cabeça, febre acima de 38ºC, tosse seca..."
-          placeholderTextColor="#BFC8CF"
-          multiline
-          numberOfLines={6}
-          value={symptoms}
-          onChangeText={setSymptoms}
-          editable={!isAnalyzing}
-        />
+          <TextInput
+            mode="outlined"
+            placeholder="Ex: Dor de cabeça, febre acima de 38ºC, tosse seca..."
+            value={symptoms}
+            onChangeText={setSymptoms}
+            multiline
+            numberOfLines={5}
+            editable={!isAnalyzing}
+            style={styles.textArea}
+            outlineStyle={styles.textAreaOutline}
+            theme={{ roundness: 14 }}
+          />
 
-        <Text style={styles.inputHint}>
-          Inclua duração dos sintomas, intensidade e qualquer informação
-          relevante.
-        </Text>
-      </View>
+          <Text variant="labelSmall" style={[styles.inputHint, { color: theme.colors.onSurfaceVariant }]}>
+            Inclua duração dos sintomas, intensidade e qualquer informação relevante.
+          </Text>
+        </Card.Content>
+      </Card>
 
-      <TouchableOpacity
-        style={[styles.primaryButton, isAnalyzing && styles.disabledButton]}
+      {/* Action Buttons */}
+      <Button
+        mode="contained"
+        icon={isAnalyzing ? undefined : "flask"}
         onPress={handleAnalyzeSymptoms}
         disabled={isAnalyzing}
+        loading={isAnalyzing}
+        style={styles.primaryBtn}
+        contentStyle={styles.btnContent}
+        labelStyle={styles.btnLabel}
       >
-        {isAnalyzing ? (
-          <>
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.primaryButtonText}>Analisando...</Text>
-          </>
-        ) : (
-          <>
-            <Ionicons
-              name="beaker"
-              size={18}
-              color="#fff"
-              style={styles.icon}
-            />
-            <Text style={styles.primaryButtonText}>Analisar Sintomas</Text>
-          </>
-        )}
-      </TouchableOpacity>
+        {isAnalyzing ? "Analisando..." : "Analisar Sintomas"}
+      </Button>
 
-      <TouchableOpacity
-        style={styles.emergencyButton}
+      <Button
+        mode="contained"
+        icon="alert"
         onPress={handleEmergency}
+        style={styles.emergencyBtn}
+        contentStyle={styles.btnContent}
+        buttonColor={appColors.urgencyHigh}
+        textColor="#fff"
+        labelStyle={styles.btnLabel}
       >
-        <Ionicons name="warning" size={18} color="#fff" style={styles.icon} />
-        <Text style={styles.emergencyButtonText}>Emergência Médica</Text>
-      </TouchableOpacity>
+        Emergência Médica
+      </Button>
 
-      <TouchableOpacity
-        style={styles.secondaryButton}
+      <Button
+        mode="outlined"
+        icon="home"
         onPress={() => router.push("/")}
+        style={styles.outlinedBtn}
+        contentStyle={styles.btnContent}
+        labelStyle={[styles.btnLabel, { color: theme.colors.onSurface }]}
       >
-        <Ionicons name="home" size={18} color="#0A3D62" style={styles.icon} />
-        <Text style={styles.secondaryButtonText}>Voltar ao início</Text>
-      </TouchableOpacity>
+        Voltar ao início
+      </Button>
 
-      <View style={styles.infoCard}>
-        <Ionicons name="information-circle" size={18} color="#1B98F5" />
-        <Text style={styles.infoText}>
-          Limite-se a descrever sintomas leves. Não substitui uma consulta
-          profissional.
+      {/* Info Banner */}
+      <Surface style={[styles.infoCard, { backgroundColor: theme.colors.primaryContainer }]} elevation={0}>
+        <Ionicons name="information-circle" size={18} color={theme.colors.primary} />
+        <Text variant="bodySmall" style={[styles.infoText, { color: theme.colors.onPrimaryContainer }]}>
+          Limite-se a descrever sintomas leves. Não substitui uma consulta profissional.
         </Text>
-      </View>
+      </Surface>
     </ScrollView>
   );
 }
@@ -278,246 +289,154 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: "#F4F7FB",
   },
+
+  /* ─── Header ─── */
   headerWrapper: {
     alignItems: "flex-start",
     marginBottom: 24,
   },
   iconBadge: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0A3D62",
+  screenTitle: {
+    fontWeight: "700",
   },
-  subtitle: {
+  screenSubtitle: {
     marginTop: 8,
-    fontSize: 14,
-    color: "#3F536C",
+    lineHeight: 22,
     maxWidth: "85%",
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 2,
+
+  /* ─── Symptoms Card ─── */
+  symptomsCard: {
+    borderRadius: 20,
+    marginBottom: 24,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0A3D62",
-    marginBottom: 8,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: "#3F536C",
+  cardHint: {
+    marginTop: 4,
     marginBottom: 16,
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#BFC8CF",
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: "#F9FBFD",
-    fontSize: 14,
-    color: "#0A3D62",
-    maxHeight: 150,
-    textAlignVertical: "top",
-    marginBottom: 12,
+  textArea: {
+    backgroundColor: "transparent",
+    marginBottom: 8,
+    minHeight: 120,
+  },
+  textAreaOutline: {
+    borderRadius: 14,
   },
   inputHint: {
-    fontSize: 12,
-    color: "#3F536C",
     fontStyle: "italic",
   },
-  primaryButton: {
-    backgroundColor: "#1B98F5",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+
+  /* ─── Buttons ─── */
+  primaryBtn: {
+    borderRadius: 100,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
   },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  emergencyButton: {
-    backgroundColor: "#E74C3C",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+  emergencyBtn: {
+    borderRadius: 100,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
   },
-  emergencyButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#0A3D62",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+  outlinedBtn: {
+    borderRadius: 100,
     marginBottom: 20,
   },
-  secondaryButtonText: {
-    color: "#0A3D62",
-    fontWeight: "600",
+  btnContent: {
+    height: 52,
+  },
+  btnLabel: {
     fontSize: 14,
-    marginLeft: 8,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
-  icon: {
-    marginRight: 4,
-  },
+
+  /* ─── Info Card ─── */
   infoCard: {
-    backgroundColor: "#E3F5FF",
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 4,
   },
   infoText: {
-    fontSize: 12,
-    color: "#0A3D62",
     marginLeft: 12,
     flex: 1,
+    lineHeight: 18,
   },
+
+  /* ─── Results ─── */
   resultHeader: {
     alignItems: "flex-start",
     marginBottom: 20,
   },
-  urgencyBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+  urgencyChip: {
     marginBottom: 12,
   },
-  urgencyBadgeText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 12,
-  },
   resultTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0A3D62",
+    fontWeight: "700",
   },
-  summarySection: {
+  resultCard: {
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  summaryRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 16,
   },
-  iconCircle: {
+  urgencyIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-    flexShrink: 0,
-  },
-  summaryText: {
-    flex: 1,
-  },
-  summaryTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0A3D62",
-    marginBottom: 6,
+    marginRight: 14,
   },
   summaryContent: {
-    fontSize: 13,
-    color: "#3F536C",
+    flex: 1,
+  },
+  summaryText: {
+    marginTop: 4,
     lineHeight: 20,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#E8E8E8",
-    marginVertical: 16,
+  resultDivider: {
+    marginBottom: 16,
   },
-  recommendationsSection: {
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
+  recTitle: {
     fontWeight: "600",
-    color: "#0A3D62",
     marginBottom: 12,
   },
-  recommendationItem: {
+  recItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 10,
   },
-  bullet: {
+  recBullet: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#1B98F5",
     marginRight: 10,
-    marginTop: 6,
+    marginTop: 7,
   },
-  recommendationText: {
-    fontSize: 13,
-    color: "#3F536C",
+  recText: {
     flex: 1,
     lineHeight: 20,
   },
   disclaimerCard: {
-    backgroundColor: "#FFF3CD",
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 16,
   },
-  disclaimerIcon: {
-    marginRight: 10,
-    marginTop: 2,
-  },
   disclaimerText: {
-    fontSize: 12,
-    color: "#664D03",
+    marginLeft: 10,
     flex: 1,
     lineHeight: 18,
   },

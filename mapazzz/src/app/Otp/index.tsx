@@ -1,28 +1,31 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
+  TextInput as RNTextInput,
   StyleSheet,
   Alert,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from 'react-native';
+import {
+  Text,
+  Surface,
+  Button,
+  useTheme,
+  IconButton,
+} from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ImageViewer from '../../components/ImageViewer';
-
-const PlaceholderImage = require('@/assets/images/emoji1.png');
 
 export default function VerificationScreen() {
+  const theme = useTheme();
   const [otp, setOtp] = useState<string[]>(['', '', '', '']);
   const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const inputs = useRef<(TextInput | null)[]>([]);
+  const inputs = useRef<(RNTextInput | null)[]>([]);
 
   useEffect(() => {
     const getPhoneNumber = async () => {
@@ -33,29 +36,23 @@ export default function VerificationScreen() {
         console.error('Erro ao recuperar número:', e);
       }
     };
-
     const generateOtp = () => {
       const otpGenerated = Math.floor(1000 + Math.random() * 9000).toString();
       setGeneratedOtp(otpGenerated);
       console.log('OTP Gerado:', otpGenerated);
     };
-
     getPhoneNumber();
     generateOtp();
   }, []);
 
   const handleChange = (text: string, index: number) => {
     if (text.length > 1) return;
-
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
-
     if (text && index < 3) {
       inputs.current[index + 1]?.focus();
     }
-
-    // Se o OTP estiver completo, verificar
     if (newOtp.every((digit) => digit !== '')) {
       const enteredOtp = newOtp.join('');
       if (enteredOtp !== generatedOtp) {
@@ -84,27 +81,55 @@ export default function VerificationScreen() {
     }
     setLoading(true);
     setTimeout(() => {
-      router.replace("/login");
+      router.replace('/Login');
       setLoading(false);
     }, 1000);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topHalf}>
-        <ImageViewer imgSource={PlaceholderImage} />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* ─── Top decorative section ─── */}
+      <View style={[styles.topDecoration, { backgroundColor: theme.colors.primary }]}>
+        <View style={styles.topContent}>
+          <Surface style={styles.otpIconSurface} elevation={0}>
+            <Ionicons name="keypad" size={32} color={theme.colors.primary} />
+          </Surface>
+          <Text variant="headlineSmall" style={styles.topTitle}>
+            Verificação
+          </Text>
+          <Text variant="bodySmall" style={styles.topSubtitle}>
+            Introduza o código enviado
+          </Text>
+        </View>
       </View>
-      <View style={styles.bottomHalf} />
 
-      <View style={styles.otpContainer}>
-        <Text style={styles.title}>Código de verificação</Text>
+      {/* ─── OTP Card ─── */}
+      <Surface style={styles.otpCard} elevation={3}>
+        <Text variant="titleMedium" style={[styles.cardTitle, { color: theme.colors.onSurface }]}>
+          Código de verificação
+        </Text>
+        <Text variant="bodySmall" style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+          Introduza o código de 4 dígitos
+        </Text>
 
         <View style={styles.otpInputContainer}>
           {otp.map((digit, index) => (
-            <TextInput
+            <RNTextInput
               key={index}
               ref={(el) => (inputs.current[index] = el)}
-              style={styles.otpInput}
+              style={[
+                styles.otpInput,
+                {
+                  borderColor: digit
+                    ? errorMessage
+                      ? theme.colors.error
+                      : theme.colors.primary
+                    : theme.colors.outlineVariant,
+                  backgroundColor: digit
+                    ? theme.colors.primaryContainer + '40'
+                    : theme.colors.surfaceVariant + '60',
+                },
+              ]}
               keyboardType="numeric"
               maxLength={1}
               value={digit}
@@ -114,132 +139,152 @@ export default function VerificationScreen() {
           ))}
         </View>
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? (
+          <Text variant="bodySmall" style={[styles.errorText, { color: theme.colors.error }]}>
+            {errorMessage}
+          </Text>
+        ) : null}
 
-        <Text style={styles.infoText}>
-          Nós enviamos o seu OTP para o seu número. Teste: {generatedOtp}
+        <Text variant="bodySmall" style={[styles.infoText, { color: theme.colors.onSurfaceVariant }]}>
+          Nós enviamos o seu OTP para o seu número.
         </Text>
-        <Text style={styles.resendText}>
+
+        <Text variant="bodySmall" style={[styles.resendText, { color: theme.colors.onSurfaceVariant }]}>
           Não recebeu o código?{' '}
           <Text
-            style={[styles.resendLink, loading && styles.disabledLink]}
+            style={[styles.resendLink, { color: theme.colors.primary }]}
             onPress={!loading ? handleSendOtp : undefined}
           >
-            Reenviar OTP.
+            Reenviar OTP
           </Text>
         </Text>
 
-        <TouchableOpacity
-          style={styles.button}
+        <Button
+          mode="contained"
+          icon="arrow-right"
           onPress={() => handleChange('', 3)}
+          style={styles.verifyButton}
+          contentStyle={styles.verifyButtonContent}
+          labelStyle={styles.verifyButtonLabel}
+          buttonColor={theme.colors.primary}
         >
-          <Ionicons name="arrow-forward" size={24} color="white" />
-        </TouchableOpacity>
+          Verificar
+        </Button>
 
-        {generatedOtp && (
-          <Text style={styles.debugText}>OTP Gerado: {generatedOtp}</Text>
-        )}
-      </View>
+        {generatedOtp ? (
+          <Surface style={[styles.debugChip, { backgroundColor: theme.colors.secondaryContainer }]} elevation={0}>
+            <Ionicons name="bug" size={14} color={theme.colors.onSecondaryContainer} />
+            <Text variant="labelSmall" style={{ color: theme.colors.onSecondaryContainer, marginLeft: 6 }}>
+              OTP Teste: {generatedOtp}
+            </Text>
+          </Surface>
+        ) : null}
+      </Surface>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative' as const,
   },
-  errorText:
-  {
-    color: 'red',
-    fontStyle: 'italic',
 
-  },
-  topHalf: {
-    flex: 1,
-    backgroundColor: '#238b45',
+  /* ─── Top decoration ─── */
+  topDecoration: {
     width: '100%',
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    height: '50%',
-  },
-  bottomHalf: {
-    flex: 1,
-    backgroundColor: '#fff',
-    width: '100%',
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    height: '50%',
-  },
-  otpContainer: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    padding: 20,
+    height: '40%',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 10,
-    elevation: 5,
-    zIndex: 1,
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: '#238b45',
-    marginBottom: 15,
+  topContent: {
+    alignItems: 'center',
+  },
+  otpIconSurface: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  topTitle: {
+    color: '#fff',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  topSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+
+  /* ─── OTP Card ─── */
+  otpCard: {
+    width: '88%',
+    borderRadius: 28,
+    padding: 28,
+    alignItems: 'center',
+    marginTop: -48,
+  },
+  cardTitle: {
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    marginBottom: 24,
   },
   otpInputContainer: {
-    flexDirection: 'row' as const,
+    flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 15,
+    gap: 12,
+    marginBottom: 20,
   },
   otpInput: {
-    width: 45,
-    height: 45,
+    width: 56,
+    height: 56,
     borderWidth: 2,
-    borderColor: '#238b45',
-    borderRadius: 10,
-    textAlign: 'center' as const,
-    fontSize: 18,
-    marginHorizontal: 5,
-    color: '#000',
+    borderRadius: 16,
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A1C1E',
+  },
+  errorText: {
+    marginBottom: 12,
+    fontWeight: '500',
   },
   infoText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 10,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   resendText: {
-    fontSize: 12,
-    color: '#666',
+    marginBottom: 24,
   },
   resendLink: {
-    color: 'blue',
-    fontWeight: '500' as const,
+    fontWeight: '700',
   },
-  disabledLink: {
-    color: '#999',
+  verifyButton: {
+    width: '100%',
+    borderRadius: 100,
   },
-  button: {
-    marginTop: 20,
-    backgroundColor: '#238b45',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
+  verifyButtonContent: {
+    height: 48,
+    flexDirection: 'row-reverse',
+  },
+  verifyButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  debugChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 5,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#238b45',
-    marginTop: 10,
+    marginTop: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
 });

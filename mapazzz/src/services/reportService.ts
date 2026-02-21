@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ENV } from "@/src/config/env";
 
-const DEFAULT_API_BASE_URL = "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net";
+const DEFAULT_API_BASE_URL = ENV.API_BASE_URL;
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;

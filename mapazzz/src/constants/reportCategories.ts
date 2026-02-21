@@ -17,7 +17,7 @@ export const reportCategories: ReportCategory[] = [
       "Receba orientação imediata para sintomas e emergências leves.",
     icon: "medkit",
     route: "/saude",
-    highlightColor: "#1B98F5",
+    highlightColor: "#1565C0",
   },
   {
     id: "seguranca",
@@ -26,7 +26,7 @@ export const reportCategories: ReportCategory[] = [
       "Registe acidentes, assaltos ou outras ocorrências para acionar ajuda.",
     icon: "shield-checkmark",
     route: "/reportar/seguranca",
-    highlightColor: "#FF6B3C",
+    highlightColor: "#EF6C00",
   },
   {
     id: "infraestrutura",
@@ -35,7 +35,7 @@ export const reportCategories: ReportCategory[] = [
       "Informe problemas de vias, iluminação pública e abastecimento de água.",
     icon: "construct",
     route: "/reportar/infraestrutura",
-    highlightColor: "#16A085",
+    highlightColor: "#00897B",
   },
   {
     id: "mapa",
@@ -43,7 +43,7 @@ export const reportCategories: ReportCategory[] = [
     description: "Visualize alertas confirmados perto de si.",
     icon: "map",
     route: "/Mapa",
-    highlightColor: "#6C5CE7",
+    highlightColor: "#7C4DFF",
   },
 ];
 

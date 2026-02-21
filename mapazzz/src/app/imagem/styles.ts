@@ -5,23 +5,26 @@ export const styles = StyleSheet.create ({
     imagem:
     {
         width:"100%",
-        height:200,
+        height:240,
         borderRadius:20,
         margin: 10,
-        backgroundColor:"silver"
+        backgroundColor:"#E0E4EA",
+        overflow:"hidden",
     },
     painel:
     {
         alignItems:"center",
-        width:300,
+        padding: 20,
     },
     container: {
         flex: 1,
         justifyContent: 'center',
+        backgroundColor: "#F8FAFE",
       },
       message: {
         textAlign: 'center',
         paddingBottom: 10,
+        color: "#44474E",
       },
       camera: {
         flex: 1,
@@ -42,7 +45,7 @@ export const styles = StyleSheet.create ({
       text: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: 'white',
+        color: '#1A1C1E',
       },
 
 });

@@ -1,7 +1,20 @@
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
-import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "expo-router";
+import React, { useState, useRef } from "react";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import {
+  Text,
+  Surface,
+  TextInput,
+  IconButton,
+  useTheme,
+} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 // Define interface para a estrutura das mensagens
 interface Message {
@@ -11,6 +24,7 @@ interface Message {
 }
 
 export default function TelaAprender() {
+  const theme = useTheme();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -79,59 +93,99 @@ export default function TelaAprender() {
     }
   };
 
-  // Função para voltar à página anterior
-  const handleGoBack = () => {
-    router.back();
-  };
-
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleGoBack}
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.header}>ChatBot de Aprendizagem</Text>
-      </View>
-      
-      <ScrollView 
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* ─── Header ─── */}
+      <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={2}>
+        <IconButton
+          icon="arrow-left"
+          iconColor="#fff"
+          size={22}
+          onPress={() => router.back()}
+          style={styles.backBtn}
+        />
+        <View style={styles.headerTitleRow}>
+          <Surface style={styles.headerIconBg} elevation={0}>
+            <Ionicons name="chatbubbles" size={18} color={theme.colors.primary} />
+          </Surface>
+          <View>
+            <Text variant="titleMedium" style={styles.headerTitle}>
+              ChatBot de Aprendizagem
+            </Text>
+            <Text variant="labelSmall" style={styles.headerSubtitle}>
+              Aprenda interativamente
+            </Text>
+          </View>
+        </View>
+      </Surface>
+
+      {/* ─── Messages ─── */}
+      <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
       >
-        {messages.map(message => (
-          <View 
-            key={message.id} 
+        {messages.map((message) => (
+          <Surface
+            key={message.id}
             style={[
-              styles.messageBubble, 
-              message.sender === 'user' ? styles.userBubble : styles.botBubble
+              styles.messageBubble,
+              message.sender === "user"
+                ? [styles.userBubble, { backgroundColor: theme.colors.primaryContainer }]
+                : [styles.botBubble, { backgroundColor: theme.colors.surfaceVariant }],
             ]}
+            elevation={message.sender === "user" ? 1 : 0}
           >
-            <Text style={styles.messageText}>{message.text}</Text>
-          </View>
+            {message.sender === "bot" && (
+              <View style={[styles.avatarCircle, { backgroundColor: theme.colors.primary + "18" }]}>
+                <Ionicons name="sparkles" size={12} color={theme.colors.primary} />
+              </View>
+            )}
+            <Text
+              variant="bodyMedium"
+              style={{
+                color:
+                  message.sender === "user"
+                    ? theme.colors.onPrimaryContainer
+                    : theme.colors.onSurfaceVariant,
+                flex: 1,
+              }}
+            >
+              {message.text}
+            </Text>
+          </Surface>
         ))}
       </ScrollView>
-      
+
+      {/* ─── Input ─── */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.inputContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.inputArea}
       >
-        <TextInput
-          style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Digite sua mensagem..."
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
-        />
-        <TouchableOpacity 
-          style={styles.sendButton}
-          onPress={handleSend}
-        >
-          <Text style={styles.sendButtonText}>Enviar</Text>
-        </TouchableOpacity>
+        <Surface style={styles.inputRow} elevation={2}>
+          <TextInput
+            mode="flat"
+            placeholder="Digite sua mensagem..."
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={handleSend}
+            returnKeyType="send"
+            style={styles.input}
+            underlineColor="transparent"
+            activeUnderlineColor="transparent"
+            theme={{ roundness: 24 }}
+          />
+          <IconButton
+            icon="send"
+            mode="contained"
+            iconColor="#fff"
+            containerColor={theme.colors.primary}
+            size={22}
+            onPress={handleSend}
+            style={styles.sendBtn}
+          />
+        </Surface>
       </KeyboardAvoidingView>
     </View>
   );
@@ -140,80 +194,97 @@ export default function TelaAprender() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: "#4a86e8",
-    paddingTop: 40, // Para dar espaço para a status bar
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
+
+  /* ─── Header ─── */
   header: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    textAlign: "center",
-    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 48,
+    paddingBottom: 14,
+    paddingHorizontal: 8,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 10,
+  backBtn: {
+    marginRight: 4,
   },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  headerIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  headerSubtitle: {
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 1,
+  },
+
+  /* ─── Messages ─── */
   messagesContainer: {
     flex: 1,
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   messagesContent: {
     paddingBottom: 10,
   },
   messageBubble: {
-    padding: 10,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 20,
     marginBottom: 10,
-    maxWidth: '80%',
+    maxWidth: "82%",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
   userBubble: {
-    backgroundColor: '#e1f5fe',
-    alignSelf: 'flex-end',
-    marginLeft: '20%',
+    alignSelf: "flex-end",
+    borderBottomRightRadius: 6,
   },
   botBubble: {
-    backgroundColor: 'white',
-    alignSelf: 'flex-start',
-    marginRight: '20%',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    alignSelf: "flex-start",
+    borderBottomLeftRadius: 6,
   },
-  messageText: {
-    fontSize: 16,
+  avatarCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 10,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+
+  /* ─── Input area ─── */
+  inputArea: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingTop: 6,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 28,
+    paddingLeft: 8,
+    paddingRight: 4,
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    padding: 10,
-    marginRight: 10,
-    backgroundColor: 'white',
+    backgroundColor: "transparent",
+    fontSize: 15,
   },
-  sendButton: {
-    backgroundColor: '#4a86e8',
-    borderRadius: 20,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  sendBtn: {
+    borderRadius: 22,
   },
 });

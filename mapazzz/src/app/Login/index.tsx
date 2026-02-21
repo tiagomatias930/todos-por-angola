@@ -1,11 +1,30 @@
-import React, {useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView} from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ImageBackground,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import {
+  Text,
+  TextInput,
+  Button,
+  Surface,
+  IconButton,
+  useTheme,
+  ActivityIndicator,
+} from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginUsuario } from '@/src/services/userService';
+import { ENV } from '@/src/config/env';
 
 export default function LoginScreen() {
+  const theme = useTheme();
   const [telefone, setTelefone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -14,7 +33,6 @@ export default function LoginScreen() {
   const storeToken = async (token: string) => {
     try {
       await AsyncStorage.setItem('BearerToken', token);
-      console.log('Token armazenado com sucesso');
     } catch (error) {
       console.error('Erro ao armazenar o token:', error);
     }
@@ -27,31 +45,32 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      // 1. Verificar credenciais no Supabase
       const usuario = await loginUsuario(telefone, password);
-
-      // 2. Guardar dados do utilizador localmente
       await AsyncStorage.setItem('userId', usuario.id || '');
       await AsyncStorage.setItem('userName', usuario.nome);
       await AsyncStorage.setItem('numberUser', usuario.telefone);
 
-      // 3. Tentar também autenticar na API externa (para obter token)
       try {
-        const response = await fetch("https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/login", {
-          method: "POST",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telefone, password })
-        });
+        const response = await fetch(
+          `${ENV.API_BASE_URL}/login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telefone, password }),
+          }
+        );
         const result = await response.json();
         if (response.ok && result.token) {
           await storeToken(result.token);
         }
       } catch {
-        // API externa indisponível — continuar com Supabase
         console.warn('API externa indisponível, login via Supabase.');
       }
 
-      Alert.alert('Sucesso', `Bem-vindo(a), ${usuario.nome}! Vai receber o OTP no seu dispositivo.`);
+      Alert.alert(
+        'Sucesso',
+        `Bem-vindo(a), ${usuario.nome}! Vai receber o OTP no seu dispositivo.`
+      );
       router.push({ pathname: '/Otp' });
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Não foi possível iniciar sessão.');
@@ -62,7 +81,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Top section with brand background */}
+      {/* ─── Top Brand Section ─── */}
       <View style={styles.topSection}>
         <ImageBackground
           source={require('@/assets/images/background-image1.png')}
@@ -70,87 +89,126 @@ export default function LoginScreen() {
         >
           <View style={styles.overlay} />
           <View style={styles.brandContainer}>
-            <Ionicons name="shield-checkmark" size={48} color="#fff" />
-            <Text style={styles.brandTitle}>Nova Angola</Text>
-            <Text style={styles.brandSubtitle}>Plataforma GovTech</Text>
+            <Surface
+              style={[styles.brandIconSurface, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
+              elevation={0}
+            >
+              <Ionicons name="shield-checkmark" size={40} color="#fff" />
+            </Surface>
+            <Text variant="headlineMedium" style={styles.brandTitle}>
+              Nova Angola
+            </Text>
+            <Text variant="labelMedium" style={styles.brandSubtitle}>
+              Plataforma GovTech
+            </Text>
           </View>
         </ImageBackground>
       </View>
 
-      {/* Bottom section with login form */}
+      {/* ─── Bottom Form Section ─── */}
       <KeyboardAvoidingView
         style={styles.bottomSection}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.formCard}>
-            <Text style={styles.title}>Acessar a minha conta</Text>
-            <Text style={styles.description}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Surface style={styles.formCard} elevation={2}>
+            <Text variant="headlineSmall" style={[styles.title, { color: theme.colors.onSurface }]}>
+              Acessar a minha conta
+            </Text>
+            <Text variant="bodyMedium" style={[styles.description, { color: theme.colors.onSurfaceVariant }]}>
               Entre com as suas credenciais para continuar a transformar a sua comunidade.
             </Text>
 
-            {/* Phone / NIF input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="person-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Número de Telefone/NIF"
-                placeholderTextColor="#8BA3C7"
-                style={styles.input}
-                value={telefone}
-                onChangeText={setTelefone}
-                keyboardType="phone-pad"
-              />
-            </View>
+            {/* Phone Input */}
+            <TextInput
+              label="Número de Telefone / NIF"
+              value={telefone}
+              onChangeText={setTelefone}
+              keyboardType="phone-pad"
+              mode="outlined"
+              left={<TextInput.Icon icon="account-outline" />}
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              theme={{
+                roundness: 14,
+                colors: { primary: theme.colors.primary },
+              }}
+            />
 
-            {/* Password input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.iconWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color="#1B98F5" />
-              </View>
-              <TextInput
-                placeholder="Senha"
-                placeholderTextColor="#8BA3C7"
-                secureTextEntry={secureEntry}
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)} style={styles.eyeButton}>
-                <Ionicons name={secureEntry ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8BA3C7" />
-              </TouchableOpacity>
-            </View>
+            {/* Password Input */}
+            <TextInput
+              label="Senha"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secureEntry}
+              mode="outlined"
+              left={<TextInput.Icon icon="lock-outline" />}
+              right={
+                <TextInput.Icon
+                  icon={secureEntry ? 'eye-off-outline' : 'eye-outline'}
+                  onPress={() => setSecureEntry(!secureEntry)}
+                />
+              }
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              theme={{
+                roundness: 14,
+                colors: { primary: theme.colors.primary },
+              }}
+            />
 
-            <TouchableOpacity onPress={() => router.replace({ pathname: '/registo' })} style={styles.forgotRow}>
-              <Text style={styles.forgotPassword}>Esqueci minha senha</Text>
-            </TouchableOpacity>
+            {/* Forgot password */}
+            <Button
+              mode="text"
+              compact
+              onPress={() => router.replace({ pathname: '/registo' })}
+              labelStyle={styles.forgotLabel}
+              style={styles.forgotButton}
+            >
+              Esqueci minha senha
+            </Button>
 
             {/* Login Button */}
-            <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            <Button
+              mode="contained"
               onPress={login}
               disabled={loading}
-              activeOpacity={0.85}
+              loading={loading}
+              icon={loading ? undefined : 'login'}
+              style={styles.loginButton}
+              contentStyle={styles.loginButtonContent}
+              labelStyle={styles.loginButtonLabel}
+              buttonColor={theme.colors.primary}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="log-in-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.loginText}>Entrar</Text>
-                </>
-              )}
-            </TouchableOpacity>
+              {loading ? 'A entrar...' : 'Entrar'}
+            </Button>
 
-            {/* Signup link */}
-            <TouchableOpacity onPress={() => router.push({ pathname: '/registo' })} style={styles.signupRow}>
-              <Text style={styles.signupText}>
-                Não tenho uma conta?{' '}
-                <Text style={styles.signupLink}>Criar conta</Text>
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginHorizontal: 12 }}>
+                ou
               </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+            </View>
+
+            {/* Sign up link */}
+            <Button
+              mode="outlined"
+              icon="account-plus"
+              onPress={() => router.push({ pathname: '/registo' })}
+              style={styles.signupButton}
+              contentStyle={styles.signupButtonContent}
+              labelStyle={[styles.signupButtonLabel, { color: theme.colors.primary }]}
+              theme={{ roundness: 100 }}
+            >
+              Criar conta
+            </Button>
+          </Surface>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -160,12 +218,12 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F6FF',
+    backgroundColor: '#F8FAFE',
   },
 
-  /* ───── Top brand section ───── */
+  /* ─── Top brand section ─── */
   topSection: {
-    flex: 0.4,
+    flex: 0.38,
     overflow: 'hidden',
   },
   imageBackground: {
@@ -177,141 +235,105 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 61, 98, 0.75)',
+    backgroundColor: 'rgba(21, 101, 192, 0.82)',
   },
   brandContainer: {
     alignItems: 'center',
     zIndex: 1,
   },
+  brandIconSurface: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   brandTitle: {
-    marginTop: 10,
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   brandSubtitle: {
     marginTop: 4,
-    fontSize: 13,
-    color: '#E3F5FF',
+    color: 'rgba(255, 255, 255, 0.8)',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    fontWeight: '600',
   },
 
-  /* ───── Bottom form section ───── */
+  /* ─── Bottom form section ─── */
   bottomSection: {
-    flex: 0.6,
+    flex: 0.62,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 0,
+    paddingHorizontal: 20,
   },
   formCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginTop: -10,
-    shadowColor: '#0A3D62',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    borderRadius: 28,
+    padding: 24,
+    marginTop: -24,
   },
-
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#0A3D62',
+    fontWeight: '700',
     marginBottom: 6,
   },
   description: {
-    fontSize: 13,
-    color: '#3F536C',
     marginBottom: 24,
-    lineHeight: 19,
-  },
-
-  /* ───── Inputs ───── */
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F6FF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 50,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E3F5FF',
-  },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E3F5FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
+    lineHeight: 21,
   },
   input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 15,
-    color: '#0A3D62',
+    marginBottom: 14,
+    backgroundColor: 'transparent',
   },
-  eyeButton: {
-    padding: 6,
+  inputOutline: {
+    borderRadius: 14,
   },
 
-  /* ───── Forgot password ───── */
-  forgotRow: {
-    alignSelf: 'flex-end',
-    marginBottom: 22,
+  /* ─── Forgot password ─── */
+  forgotButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: -4,
   },
-  forgotPassword: {
-    marginRight: 75,
-    color: '#1B98F5',
+  forgotLabel: {
     fontSize: 13,
     fontWeight: '600',
   },
 
-  /* ───── Login button ───── */
+  /* ─── Login button ─── */
   loginButton: {
-    flexDirection: 'row',
-    backgroundColor: '#0A3D62',
-    borderRadius: 30,
-    width: '100%',
+    borderRadius: 100,
+  },
+  loginButtonContent: {
     height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0A3D62',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+  loginButtonLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
-  /* ───── Sign up ───── */
-  signupRow: {
-    marginTop: 22,
+  /* ─── Divider ─── */
+  dividerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 20,
   },
-  signupText: {
-    color: '#3F536C',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+
+  /* ─── Signup button ─── */
+  signupButton: {
+    borderRadius: 100,
+  },
+  signupButtonContent: {
+    height: 48,
+  },
+  signupButtonLabel: {
     fontSize: 14,
-  },
-  signupLink: {
-    color: '#1B98F5',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });

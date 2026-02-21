@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { ENV } from "@/src/config/env";
 import {
   View,
   Text,
@@ -267,7 +268,7 @@ export default function ReportCamera() {
 
       try {
         const response = await fetch(
-          "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/postar_aria",
+          `${ENV.API_BASE_URL}/postar_aria`,
           {
             method: "POST",
             headers: {
@@ -431,7 +432,7 @@ async function uploadEvidence(uri: string) {
     } as any);
 
     const response = await fetch(
-      "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/upload",
+      `${ENV.API_BASE_URL}/upload`,
       {
         method: "POST",
         body: formData,

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
-import { View, SafeAreaView, StyleSheet, TouchableOpacity, Dimensions, Image, Text, ScrollView, Modal, Alert } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Dimensions, Image, Text, ScrollView, Modal, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { MAP_TYPES, Circle } from "react-native-maps";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,8 +9,9 @@ import { TextInput } from "react-native";
 import { Search, MapPin, Layers } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { reportCategories } from "@/src/constants/reportCategories";
+import { ENV } from "@/src/config/env";
 
 
 const screenWidth = Dimensions.get("window").width;
@@ -226,18 +228,14 @@ export default function TelaMapa() {
   //   { id: "3", name: "Região Litorânea" },
   // ];
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+  const handleGetCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setErrorMsg("Permission to access location was denied");
         return;
       }
-    })();
-  }, []);
 
-  const handleGetCurrentLocation = async () => {
-    try {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
@@ -303,7 +301,7 @@ export default function TelaMapa() {
 
     try {
       const res = await fetch(
-        "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/analisar_aria",
+        `${ENV.API_BASE_URL}/analisar_aria`,
         {
           method: "POST",
           headers: {
@@ -314,7 +312,12 @@ export default function TelaMapa() {
         },
       );
 
-      const data = await res.json();
+      const text = await res.text();
+      if (!text || text.trimStart().startsWith("<")) {
+        Alert.alert("Erro", "Servidor indisponível. Tente novamente mais tarde.");
+        return;
+      }
+      const data = JSON.parse(text);
       if (!res.ok) {
         Alert.alert(
           "Aviso",
@@ -339,7 +342,7 @@ export default function TelaMapa() {
   const fetchConfirmationCount = async (ariaDeRiscoId: string) => {
     try {
       const response = await fetch(
-        `https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/buscar_analise_total?ariaDeRisco=${ariaDeRiscoId}`,
+        `${ENV.API_BASE_URL}/buscar_analise_total?ariaDeRisco=${ariaDeRiscoId}`,
         {
           method: "GET",
           headers: {
@@ -347,12 +350,17 @@ export default function TelaMapa() {
           },
         }
       );
-      if (!response.ok) throw new Error("Erro ao acessar a API.");
-      
-      const data = await response.json();
+      if (!response.ok) throw new Error(`Erro ao acessar a API (${response.status})`);
+
+      const text = await response.text();
+      if (!text || text.trimStart().startsWith("<")) {
+        console.warn("API retornou HTML em vez de JSON (confirmação)");
+        return 0;
+      }
+      const data = JSON.parse(text);
       return data.confirmationCount;
     } catch (error) {
-      console.error("Erro na requisição:", error);
+      console.error("Erro na requisição (confirmação):", error);
       return 0; // Se algo der errado, assume 0 confirmações
     }
   };
@@ -360,7 +368,7 @@ export default function TelaMapa() {
   const fetchDataAndCreateCircles = async () => {
     try {
       const response = await fetch(
-        "https://bf40160dfbbd815a75c09a0c42a343c0.serveo.net/buscar_aria_de_risco",
+        `${ENV.API_BASE_URL}/buscar_aria_de_risco`,
         {
           method: "GET",
           headers: {
@@ -369,9 +377,15 @@ export default function TelaMapa() {
         }
       );
   
-      if (!response.ok) throw new Error("Erro ao acessar a API.");
-  
-      const data = await response.json();
+      if (!response.ok) throw new Error(`Erro ao acessar a API (${response.status})`);
+
+      const text = await response.text();
+      if (!text || text.trimStart().startsWith("<")) {
+        console.warn("Backend indisponível (túnel serveo expirado?). O mapa será exibido sem ocorrências.");
+        setLocations([]);
+        return;
+      }
+      const data = JSON.parse(text);
       const updatedLocations: MapLocation[] = await Promise.all(
         data.map(async (location: MapLocation) => {
           const confirmationCount = await fetchConfirmationCount(location.id);
@@ -382,7 +396,8 @@ export default function TelaMapa() {
 
       setLocations(updatedLocations);
     } catch (error) {
-      console.error("Erro na requisição:", error);
+      console.warn("Erro na requisição (backend offline?):", error);
+      setLocations([]);
     }
   };
   useEffect(() => {

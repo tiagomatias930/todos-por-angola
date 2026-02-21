@@ -7,4 +7,6 @@ expo-env.d.ts
 .ENV
 .env
 env.ts
+supabase_migration_users.sql
+supabase_migration_users.sql
 # @end expo-cli
